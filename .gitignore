@@ -1,0 +1,12 @@
+node_modules/
+.next/
+.venv/
+__pycache__/
+*.pyc
+vendor/
+data/tiles/
+data/chips/
+data/qa-tiles/
+data/street_trees.csv
+data/weights/
+.DS_Store

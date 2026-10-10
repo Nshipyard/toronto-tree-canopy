@@ -20,9 +20,11 @@ The pilot measures its own accuracy; the table below carries the measured number
 
 | Metric | Measured | How measured |
 |---|---|---|
-| Detection F1 | <!-- ACCURACY: coordinator fills measured numbers --> | Hand-labeled QA tiles from the Ward 12 pilot |
-| Calibration R2 (broadleaf) | <!-- ACCURACY: coordinator fills measured numbers --> | Held-out Toronto street-tree records |
-| Calibration R2 (conifer) | <!-- ACCURACY: coordinator fills measured numbers --> | Held-out Toronto street-tree records |
+| Detection F1 (pre-trained DeepForest, leaf-off 2022 ortho) | **0.023** at IoU 0.5 | 182 hand-labeled crowns, 3 QA tiles, Ward 12 |
+| Detection F1 (fine-tuned on 118 Toronto crowns, production 0.40 m GSD) | **0.000** on held-out tile | 64 crowns, qa7 tile; the weak 8 cm signal (F1 0.233) collapses at production resolution |
+| Calibration R2 | **Not completable** | Pairing detections to street trees would fit noise at F1 ~0; no R2 is reported |
+
+**Pilot verdict (2026-10-10):** the detection track did not ship. All five City orthophoto vintages checked (2015, 2018, 2020, 2021, 2022) are leaf-off spring captures, and RGB crown detection trained on leaf-on data fails on them (F1 0.023 pre-trained, 0.000 fine-tuned at production resolution). The recommended next step is a pivot to the 2018 leaf-on canopy raster for per-parcel canopy percent, which sidesteps detection entirely. Full reasoning in `data/METHOD_NOTES.md`.
 
 Until the pipeline delivers measured numbers, the app and UI carry sample placeholders, always marked `"sample": true` in `data/accuracy.json` and with an on-page sample banner. Do not treat placeholder values as measured.
 

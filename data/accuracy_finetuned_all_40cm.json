@@ -1,0 +1,93 @@
+{
+ "imagery_vintage": "2022",
+ "gsd_m": 0.4,
+ "iou": 0.5,
+ "model": "deepforest 2.1.0 fine-tuned on 118 hand-labeled Toronto crowns (qa1+qa3, leaf-off 2022 ortho)",
+ "n_labeled_crowns": 182,
+ "n_qa_tiles": 3,
+ "label_method": "hand-labeled center+diameter eyeball estimates on 8cm ortho by visual inspection",
+ "threshold_sweep": [
+  {
+   "threshold": 0.05,
+   "tp": 5,
+   "fp": 86,
+   "fn": 177,
+   "precision": 0.055,
+   "recall": 0.027,
+   "f1": 0.037
+  },
+  {
+   "threshold": 0.1,
+   "tp": 3,
+   "fp": 53,
+   "fn": 179,
+   "precision": 0.054,
+   "recall": 0.016,
+   "f1": 0.025
+  },
+  {
+   "threshold": 0.15,
+   "tp": 1,
+   "fp": 48,
+   "fn": 181,
+   "precision": 0.02,
+   "recall": 0.005,
+   "f1": 0.009
+  },
+  {
+   "threshold": 0.2,
+   "tp": 0,
+   "fp": 43,
+   "fn": 182,
+   "precision": 0.0,
+   "recall": 0.0,
+   "f1": 0.0
+  },
+  {
+   "threshold": 0.25,
+   "tp": 0,
+   "fp": 20,
+   "fn": 182,
+   "precision": 0.0,
+   "recall": 0.0,
+   "f1": 0.0
+  },
+  {
+   "threshold": 0.3,
+   "tp": 0,
+   "fp": 4,
+   "fn": 182,
+   "precision": 0.0,
+   "recall": 0.0,
+   "f1": 0.0
+  },
+  {
+   "threshold": 0.4,
+   "tp": 0,
+   "fp": 1,
+   "fn": 182,
+   "precision": 0.0,
+   "recall": 0.0,
+   "f1": 0.0
+  },
+  {
+   "threshold": 0.5,
+   "tp": 0,
+   "fp": 0,
+   "fn": 182,
+   "precision": 0.0,
+   "recall": 0.0,
+   "f1": 0.0
+  }
+ ],
+ "best": {
+  "threshold": 0.05,
+  "tp": 5,
+  "fp": 86,
+  "fn": 177,
+  "precision": 0.055,
+  "recall": 0.027,
+  "f1": 0.037
+ },
+ "note": "Imagery is leaf-off (early spring 2022); model trained on leaf-on NEON data. Labels are eyeball estimates, not survey-grade."
+}

@@ -143,3 +143,135 @@ viable path for per-parcel canopy signal is the 2018 leaf-on canopy raster
 - Screening signal only. Nothing in the output says "permit required".
 - Every record carries imagery_vintage "2022": trees removed after the
   capture are invisible to this product.
+
+## Aurora Solar research (2026-10-10, web research by subagent)
+
+Question: how does Aurora Solar (user's former employer) do tree detection for
+shade analysis, and what transfers to leaf-off Toronto open data?
+
+Findings (sourced from Aurora help docs, blog, patents US11830137B2 /
+US11983813B2, NREL blind study fy16osti/65558, TechCrunch/Engineering.com):
+- Input for trees is aerial LiDAR point clouds / height fields, NOT RGB
+  appearance. Aurora pre-stages a stitched LiDAR database (~2/3 of US
+  population coverage as of 2019). RGB (Google/satellite, Nearmap, EagleView,
+  drone) is the visual backdrop and an ML input for ROOF geometry only.
+- No 2D RGB crown detection exists anywhere in their pipeline. Trees enter
+  the shade model two ways: (a) LIDAR Shading mode, the default automated
+  path: the raw LiDAR height field is ray-traced DIRECTLY in the irradiance
+  engine, no tree objects drawn at all; (b) parametric 3D tree solids
+  (cone/sphere with Tree Height + Crown Height), placed manually or by AI
+  Tree Detection (~Sept 2025), auto-sized to LiDAR points ("Fit Trees to
+  LIDAR"). AI Tree Detection outputs location + canopy spread + height: 3D
+  parameters, never a 2D polygon mask.
+- Leaf-on vs leaf-off: NOT modeled. Static 3D scene; no species/dormancy
+  parameter. The shade model inherits whatever season the LiDAR snapshot was
+  captured in. Competitor Scanifly markets seasonal dormancy simulation as a
+  differentiator against Aurora, consistent with Aurora not doing it.
+- Hypothesis verdict: CONFIRMED, stronger than expected. Aurora works in 3D
+  height space rather than 2D RGB appearance, and for its primary path it
+  does not detect tree objects at all.
+
+Transferable techniques (ranked), now under test as experiment arms:
+1. Arm B: abandon 2D crown polygons; detect in a canopy height model
+   (CHM = DSM - DTM). A tree is a localized height bump; the bump persists
+   leaf-off because trunks/branches occupy 3D space.
+2. Arm B method: local-maxima treetop detection + marker-controlled
+   watershed crown segmentation on the CHM (standard forestry recipe).
+3. Fit each crown as a parametric 3D solid (ellipsoid/cone: treetop height,
+   crown-base height, footprint ellipse) rather than a flat polygon.
+4. Arm C (no-LiDAR fallback): shadow-length height proxies from the leaf-off
+   orthophoto, h = L / tan(solar elevation) from acquisition timestamp +
+   solar ephemeris, the only height signal in pure RGB.
+
+## Arm B: CHM watershed detection (2026-10-10) — measured F1 0.046, NOT a win
+
+Data: NRCan HRDEM Mosaic WCS (TRCA GTA_2023 airborne LiDAR, ~1 m DSM+DTM,
+Open Government Licence - Canada). CHM = DSM - DTM, reprojected EPSG:3857
+at 1.0 m. Extra WCS chunks fetched to cover QA tiles (lon -79.455..-79.405,
+lat 43.665..43.69); files under data/lidar/qa_cover/.
+
+Method (Aurora transferable technique #2): Gaussian sigma 0.5 m,
+local-maxima treetops (min separation 2 m, min height 2.5 m),
+marker-controlled watershed with 1.5 m floor; drop segments with 5 m-window
+CHM std < 0.5 m (building suppression), >120 m^2, or >400 m^2 and flat.
+Params picked from qa1+qa3 grid only; qa7 untouched. Box = segment bbox,
+score = segment max CHM normalized per tile.
+
+Result (identical harness, IoU 0.5): best F1 0.046 overall
+(tp 5, fp 31, fn 177 at threshold 0.05); qa7-only F1 0.000.
+Baselines: RGB pre-trained 0.023, RGB fine-tuned 0.000.
+
+Mechanism: at 1 m the CHM is a near-continuous surface in dense urban
+fabric, so watershed cannot isolate crowns. In qa1/qa3, houses (7-9 m) and
+trees (8-14 m) interlock into multi-building segments; the roughness
+suppression feature had no separation power (median roughness 1.02 for
+GT-matching vs 0.96 for junk segments). In qa7 (mature canopy) crowns merge
+into one canopy surface that the area cap discards wholesale, hence 0.000
+on the held-out tile. Height separates vegetation from ground well at 1 m,
+but 1 m is too coarse for crown INSTANCE segmentation at IoU 0.5 on 7-8 m
+crowns embedded in same-height urban fabric. The Aurora transfer failed
+here, informatively: the technique assumes crowns stand out as separable
+height bumps against a lower background (true in sparse forestry, false in
+dense urban Toronto at 1 m).
+
+## Arm C: shadow-height (2026-10-10) — UNTESTABLE
+
+No acquisition timestamp exists for the cot_ortho_2022_color_8cm imagery
+(13 sources checked: tiles.json, qa jsons, export script, method notes,
+ArcGIS service metadata, PNG EXIF, memory, web, retired open data page,
+repo grep, umbrella repos). Without a sun angle, h = L/tan(elevation) is
+an invented experiment. Arm stopped before running; recorded in
+data/accuracy_armC_shadow.json. Runnable later if City flight records
+surface.
+
+## Arm D: 2018 Tree Canopy polygons as fallback (2026-10-10)
+
+Dataset: City of Toronto Open Data "Forest and Land Cover" package
+(id 61642048-56bb-4050-b7c3-f569fcf94527), resource "2018 Tree Canopy Study
+Geodatabase" (436,398,730 bytes, verified). CORRECTION to earlier premise:
+the geodatabase contains NO raster; it holds one vector layer
+LandCover2018, 1,812 multipolygons (EPSG:2952) from NDVI segmentation of
+multispectral satellite imagery + LiDAR. Class 1 = tree (233 polys).
+Downloaded to data/canopy2018/ (reproducible; binaries gitignored, exact
+CKAN URL in data/accuracy_armD_canopy2018.json).
+
+Evaluation (different product, different metric): per-tile canopy fraction
+= tree-polygon area within tile / 6400 m^2, vs label-derived fraction
+(sum pi*(d/2)^2 / 6400; double-counts overlapping crowns, inflating labels).
+
+| tile | 2018 frac | label frac | abs err |
+|------|-----------|------------|---------|
+| qa1  | 0.1583    | 0.4068     | 0.2485  |
+| qa3  | 0.1380    | 0.3580     | 0.2200  |
+| qa7  | 0.4585    | 0.4338     | 0.0247  |
+
+MAE = 0.164, Pearson r = 0.81 (n=3, indicative only). Full results:
+data/accuracy_armD_canopy2018.json.
+
+Mechanism: the 2018 product is a coarse land-cover segmentation that
+labels whole planting strips as "tree" but cannot resolve individual
+crowns or intra-crown gaps, so it under-reports systematically on sparse
+street-tree tiles (off by ~0.22-0.25) and only roughly matches dense qa7.
+The r=0.81 rank-ordering partly masks a systematic granularity mismatch.
+Vintage is 2018 (8 years old); doc does not name the satellite or month.
+
+## Head-to-head verdict (2026-10-10, all measured on the same 182 labels)
+
+| arm | signal | metric | measured |
+|-----|--------|--------|----------|
+| A | RGB pre-trained DeepForest, 0.40 m | F1@IoU0.5 | 0.023 |
+| A2 | RGB fine-tuned 15ep/118 crowns, 0.40 m | F1@IoU0.5 | 0.000 |
+| B | CHM watershed, 1 m LiDAR | F1@IoU0.5 | 0.046 (0.000 on held-out qa7) |
+| C | shadow-height | — | UNTESTABLE (no acquisition timestamp) |
+| D | 2018 canopy polygons | per-tile frac MAE | 0.164 (r=0.81, n=3) |
+
+Winner by measurement: NONE for individual crown detection. Arm B's 0.046
+is not meaningfully above the 0.023 baseline and is strictly worse on the
+held-out tile. Three independent signals (RGB appearance, RGB fine-tune,
+1 m height geometry) all fail, with understood mechanisms: leaf-off kills
+appearance; 1 m CHM is a continuous surface in dense urban fabric.
+RECOMMENDATION: shelve individual-crown detection from open data. Arm D
+can support a much weaker per-parcel canopy-percent product only, with
+known MAE ~0.16 and 2018 vintage; it cannot answer the 30 cm / 61 cm
+by-law question. Next step if the product matters: commercial leaf-on
+imagery or higher-resolution LiDAR (procurement decision, not tested here).

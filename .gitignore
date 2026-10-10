@@ -10,3 +10,8 @@ data/qa-tiles/
 data/street_trees.csv
 data/weights/
 .DS_Store
+data/canopy2018/
+data/lidar/wcs/
+data/lidar/qa_cover/
+data/lidar/raw/
+data/lidar/chunks/

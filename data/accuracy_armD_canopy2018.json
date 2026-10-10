@@ -1,0 +1,30 @@
+{
+  "arm": "D-canopy2018",
+  "per_tile": {
+    "qa1": {
+      "raster_frac": 0.1583,
+      "label_frac": 0.4068
+    },
+    "qa3": {
+      "raster_frac": 0.138,
+      "label_frac": 0.358
+    },
+    "qa7": {
+      "raster_frac": 0.4585,
+      "label_frac": 0.4338
+    }
+  },
+  "mae": 0.1644,
+  "correlation": 0.8069,
+  "n_tiles": 3,
+  "raster_resolution_m": null,
+  "vintage_observed": "2018 (vector LandCover2018 polygons from automated classification of multispectral satellite imagery + LiDAR; exact capture month/day and satellite unnamed in 2018-land-cover-documentation.docx)",
+  "limitations": [
+    "The 2018 geodatabase contains no raster; Arm D ran on vector land-cover polygons (1812 multipolygons, EPSG:2952) produced by NDVI segmentation of satellite imagery, so 'raster_frac' is a polygon-intersection fraction, not a pixel fraction.",
+    "Classes: 1=tree, 2=grass, 3=bare, 4=water, 5=building, 6=road, 7=other, 8=shrub, 0=(empty, 55 features); agriculture removed per methodology.",
+    "Label fraction sums circular crown areas (pi*(d/2)^2); overlapping crowns double-count, inflating label_frac.",
+    "Labels were made on 2022 leaf-off orthophotos; the 2018 data predates them by ~4 years, so growth/removal/disease between 2018 and 2022 contributes mismatch.",
+    "n=3 tiles: Pearson correlation is indicative only.",
+    "Class polygons are large image segments (organizePolygons had to be skipped); sub-canopy texture (gaps between crowns) inside a 'tree' polygon is not resolved, biasing the 2018 fraction upward where crowns are sparse."
+  ]
+}

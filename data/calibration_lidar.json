@@ -6,210 +6,190 @@
  },
  "scaler": {
   "mean": [
-   9.7161,
-   48.8832
+   9.9465,
+   37.289
   ],
   "sd": [
-   4.5927,
-   28.3439
+   4.8005,
+   26.3174
   ]
  },
- "n_trees": 13208,
- "n_no_chm": 4,
- "roughness_gate_m": 0.46,
- "roughness_note": "Peaks smoother than p5 of street-tree crown roughness are treated as structures (flat roofs), not trees, and excluded from parcel scoring. At fit trees: p1=0.085 m, p5=0.46 m, median=2.092 m.",
+ "n_trees": 9811,
+ "n_no_chm": 3401,
+ "roughness_gate_m": 0.772,
+ "roughness_note": "Peaks smoother than p5 of street-tree crown roughness are treated as structures (flat roofs), not trees, and excluded from parcel scoring. At fit trees: p1=0.442 m, p5=0.772 m, median=2.374 m.",
  "generic_ge_30": {
-  "intercept": -1.0492,
-  "coef_h": 0.708,
-  "coef_area": 0.3999,
-  "train_auc": 0.7631,
-  "cv_auc_mean": 0.763,
-  "cv_auc_sd": 0.0087,
+  "intercept": -1.0393,
+  "coef_h": 0.3822,
+  "coef_area": 1.1402,
+  "train_auc": 0.8263,
+  "cv_auc_mean": 0.8263,
+  "cv_auc_sd": 0.0048,
   "calibration_bins": [
    {
-    "n": 1321,
-    "pred_mean": 0.0594,
-    "obs_frac": 0.1499
+    "n": 981,
+    "pred_mean": 0.0379,
+    "obs_frac": 0.0775
    },
    {
-    "n": 1321,
-    "pred_mean": 0.0934,
-    "obs_frac": 0.0886
+    "n": 980,
+    "pred_mean": 0.0508,
+    "obs_frac": 0.0449
    },
    {
-    "n": 1321,
-    "pred_mean": 0.144,
-    "obs_frac": 0.1249
+    "n": 983,
+    "pred_mean": 0.0861,
+    "obs_frac": 0.0824
    },
    {
-    "n": 1320,
-    "pred_mean": 0.2032,
-    "obs_frac": 0.1485
+    "n": 980,
+    "pred_mean": 0.1439,
+    "obs_frac": 0.1092
    },
    {
-    "n": 1321,
-    "pred_mean": 0.2538,
-    "obs_frac": 0.1673
+    "n": 981,
+    "pred_mean": 0.2212,
+    "obs_frac": 0.1896
    },
    {
-    "n": 1321,
-    "pred_mean": 0.2964,
-    "obs_frac": 0.2036
+    "n": 981,
+    "pred_mean": 0.3232,
+    "obs_frac": 0.3078
    },
    {
-    "n": 1320,
-    "pred_mean": 0.3419,
-    "obs_frac": 0.2773
+    "n": 982,
+    "pred_mean": 0.4443,
+    "obs_frac": 0.4633
    },
    {
-    "n": 1321,
-    "pred_mean": 0.4024,
-    "obs_frac": 0.4572
+    "n": 980,
+    "pred_mean": 0.5601,
+    "obs_frac": 0.5694
    },
    {
-    "n": 1321,
-    "pred_mean": 0.4967,
-    "obs_frac": 0.645
+    "n": 981,
+    "pred_mean": 0.6655,
+    "obs_frac": 0.6962
    },
    {
-    "n": 1321,
-    "pred_mean": 0.663,
-    "obs_frac": 0.6919
+    "n": 982,
+    "pred_mean": 0.7738,
+    "obs_frac": 0.7658
    }
   ]
  },
  "generic_gt_61": {
-  "intercept": -3.1316,
-  "coef_h": 0.9171,
-  "coef_area": 0.3995,
-  "train_auc": 0.8052,
-  "cv_auc_mean": 0.8052,
-  "cv_auc_sd": 0.0087,
+  "intercept": -3.9641,
+  "coef_h": 1.4587,
+  "coef_area": 0.7468,
+  "train_auc": 0.8956,
+  "cv_auc_mean": 0.8956,
+  "cv_auc_sd": 0.0097,
   "calibration_bins": [
    {
-    "n": 1321,
-    "pred_mean": 0.0058,
-    "obs_frac": 0.0401
+    "n": 981,
+    "pred_mean": 0.0007,
+    "obs_frac": 0.0122
    },
    {
-    "n": 1321,
-    "pred_mean": 0.0105,
-    "obs_frac": 0.0129
+    "n": 981,
+    "pred_mean": 0.0015,
+    "obs_frac": 0.0051
    },
    {
-    "n": 1321,
-    "pred_mean": 0.0184,
-    "obs_frac": 0.0242
+    "n": 981,
+    "pred_mean": 0.0034,
+    "obs_frac": 0.0102
    },
    {
-    "n": 1320,
-    "pred_mean": 0.0291,
-    "obs_frac": 0.0136
+    "n": 981,
+    "pred_mean": 0.0075,
+    "obs_frac": 0.001
    },
    {
-    "n": 1321,
-    "pred_mean": 0.0391,
-    "obs_frac": 0.0363
+    "n": 981,
+    "pred_mean": 0.0147,
+    "obs_frac": 0.0153
    },
    {
-    "n": 1321,
-    "pred_mean": 0.0493,
-    "obs_frac": 0.0204
+    "n": 982,
+    "pred_mean": 0.0275,
+    "obs_frac": 0.0092
    },
    {
-    "n": 1320,
-    "pred_mean": 0.0631,
-    "obs_frac": 0.0174
+    "n": 980,
+    "pred_mean": 0.0486,
+    "obs_frac": 0.0112
    },
    {
-    "n": 1321,
-    "pred_mean": 0.0853,
-    "obs_frac": 0.0341
+    "n": 981,
+    "pred_mean": 0.088,
+    "obs_frac": 0.0744
    },
    {
-    "n": 1321,
-    "pred_mean": 0.1323,
-    "obs_frac": 0.131
+    "n": 981,
+    "pred_mean": 0.1654,
+    "obs_frac": 0.1774
    },
    {
-    "n": 1321,
-    "pred_mean": 0.2837,
-    "obs_frac": 0.3861
+    "n": 982,
+    "pred_mean": 0.4116,
+    "obs_frac": 0.4521
    }
   ]
  },
  "per_genus_ge_30": {
   "Acer": {
-   "n": 3422,
-   "frac_ge_30": 0.4901,
-   "train_auc": 0.7759,
-   "cv_auc_mean": 0.7752,
-   "cv_auc_sd": 0.0124,
-   "intercept": -0.3438,
-   "coef_h": 0.606,
-   "coef_area": 0.5405
+   "n": 2747,
+   "frac_ge_30": 0.5024,
+   "train_auc": 0.838,
+   "cv_auc_mean": 0.8376,
+   "cv_auc_sd": 0.004,
+   "intercept": -0.6591,
+   "coef_h": 0.4366,
+   "coef_area": 1.2257
   },
   "Gleditsia": {
-   "n": 1042,
-   "frac_ge_30": 0.4088,
-   "train_auc": 0.8022,
-   "cv_auc_mean": 0.8034,
-   "cv_auc_sd": 0.0558,
-   "intercept": -0.7882,
-   "coef_h": 1.2208,
-   "coef_area": 0.1392
-  },
-  "Picea": {
-   "n": 668,
-   "frac_ge_30": 0.3862,
-   "train_auc": 0.7571,
-   "cv_auc_mean": 0.7568,
-   "cv_auc_sd": 0.0037,
-   "intercept": -0.7191,
-   "coef_h": 1.1116,
-   "coef_area": 0.0023
-  },
-  "Prunus": {
-   "n": 612,
-   "frac_ge_30": 0.1356,
-   "train_auc": 0.597,
-   "cv_auc_mean": 0.5858,
-   "cv_auc_sd": 0.0628,
-   "intercept": -1.786,
-   "coef_h": -0.1397,
-   "coef_area": 0.3643
+   "n": 825,
+   "frac_ge_30": 0.4703,
+   "train_auc": 0.8595,
+   "cv_auc_mean": 0.8592,
+   "cv_auc_sd": 0.0219,
+   "intercept": -1.0699,
+   "coef_h": 1.435,
+   "coef_area": 0.7574
   },
   "Quercus": {
-   "n": 809,
-   "frac_ge_30": 0.1273,
-   "train_auc": 0.7642,
-   "cv_auc_mean": 0.763,
-   "cv_auc_sd": 0.0757,
-   "intercept": -1.9833,
-   "coef_h": 0.8413,
-   "coef_area": 0.325
+   "n": 501,
+   "frac_ge_30": 0.1397,
+   "train_auc": 0.9116,
+   "cv_auc_mean": 0.9114,
+   "cv_auc_sd": 0.0502,
+   "intercept": -2.368,
+   "coef_h": -0.1995,
+   "coef_area": 2.0909
   },
   "Tilia": {
-   "n": 672,
-   "frac_ge_30": 0.5685,
-   "train_auc": 0.8074,
-   "cv_auc_mean": 0.8057,
+   "n": 533,
+   "frac_ge_30": 0.6173,
+   "train_auc": 0.8887,
+   "cv_auc_mean": 0.8891,
    "cv_auc_sd": 0.0354,
-   "intercept": -0.06,
-   "coef_h": 1.4686,
-   "coef_area": -0.2579
+   "intercept": -0.3,
+   "coef_h": 1.2369,
+   "coef_area": 0.8654
   },
   "Ulmus": {
-   "n": 675,
-   "frac_ge_30": 0.2919,
-   "train_auc": 0.7073,
-   "cv_auc_mean": 0.7052,
-   "cv_auc_sd": 0.0301,
-   "intercept": -1.1529,
-   "coef_h": 0.1629,
-   "coef_area": 0.6255
+   "n": 506,
+   "frac_ge_30": 0.2787,
+   "train_auc": 0.8426,
+   "cv_auc_mean": 0.8389,
+   "cv_auc_sd": 0.042,
+   "intercept": -1.8586,
+   "coef_h": 0.8666,
+   "coef_area": 0.7825
   }
  },
  "shipped": "generic_ge_30 and generic_gt_61 (genus is unknown at inference time)",
- "limitations": "Fit on City of Toronto street trees: managed road-allowance trees, pruned and spaced by the City. Transfer to private backyard trees is approximate. The model conditions on tree presence: P(DBH>=30 | h, area) was fit at known tree locations, so applied to a LiDAR peak it answers 'if this peak is a tree, how likely is it mature'. Peaks smoother than p5 of street-tree crown roughness are excluded as structures (flat roofs), but pitched roofs and other rough structures still pass the gate and inflate parcel rollups. Screening signal only; not a permit determination."
+ "limitations": "Fit on City of Toronto street trees: managed road-allowance trees, pruned and spaced by the City. Transfer to private backyard trees is approximate. The model conditions on tree presence: P(DBH>=30 | h, area) was fit at known tree locations, so applied to a LiDAR peak it answers 'if this peak is a tree, how likely is it mature'. Peaks smoother than p5 of street-tree crown roughness are excluded as structures (flat roofs). City building footprints (2 m buffer) are masked to NaN in the CHM, so mapped buildings no longer contribute peaks; structures missing from the footprint dataset (unmapped outbuildings) can still pass the gate and inflate parcel rollups. Screening signal only; not a permit determination."
 }

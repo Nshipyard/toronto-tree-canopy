@@ -4,7 +4,8 @@
 For each Ward 12 parcel: crop a base image to the parcel bbox + 6 m buffer
 (EPSG:3857), tint the tall-canopy pixels (2023 LiDAR CHM >= 8 m) green, then draw:
 
-  - tall canopy (>= 8 m): GREEN translucent tint, from the 1 m CHM
+  - tall canopy (>= 8 m): GREEN translucent tint, from the building-masked 1 m
+    CHM (City footprints, 2 m buffer, set to NaN: no tint on rooftops)
   - parcel boundary: solid dark line (white underlay)
   - 6 m neighbour buffer: dashed gray rectangle (the image edge)
   - a 10 m scale bar and a caption band naming the sources
@@ -35,7 +36,7 @@ from PIL import Image, ImageDraw, ImageFont
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 CANOPY = os.path.join(ROOT, "data", "parcel_canopy_ward12.json")
-CHM_PATH = os.path.join(ROOT, "data", "lidar", "wcs", "ward12_chm_full.tif")
+CHM_PATH = os.path.join(ROOT, "data", "lidar", "wcs", "ward12_chm_full_masked.tif")
 
 GSD = 0.40            # metres per pixel of the exported ortho tiles
 TILE_PX = 2048
@@ -113,7 +114,7 @@ def chm_base(bbox, chm_src):
     b = bbox_to4326(bbox)
     win = from_bounds(b[0], b[1], b[2], b[3], chm_src.transform)
     arr = chm_src.read(1, window=win)
-    v = np.where(arr == -9999.0, 0.0, arr).astype("float32")
+    v = np.where(np.isfinite(arr), arr, 0.0).astype("float32")
     gray = (235.0 - np.clip(v, 0, 30) / 30.0 * 165.0).astype("uint8")
     img = Image.fromarray(np.stack([gray, gray, gray], axis=-1), "RGB")
     return img, "Base: 2023 LiDAR surface (no orthophoto tile here) · Canopy: 2023 LiDAR"

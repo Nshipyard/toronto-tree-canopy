@@ -384,3 +384,79 @@ not implemented. Verdict: NOT a winner by the 0.1 held-out bar, but the core
 hypothesis is proved on urban trees (0.611 vs 0.000 for the 1 m watershed on
 the same corrected labels). Recommended next: proper relabeling + adaptive
 radius retest. Full report: `data/TRACKA_REPORT.md`.
+
+## Bug fix 2026-10-10: building-footprint mask applied to the shipped Track B metrics
+
+What was wrong: the shipped per-parcel metrics (first Track B push, 2026-10-10)
+were computed on the UNMASKED 1 m CHM, so rooftops counted as tall canopy. The
+notes already admitted the mechanism: 23.5% of Ward 12 pixels >= 8 m, "roofs
+dominate the tall band". The map tint (CHM >= 8 m) rendered green on rooftops,
+which the user reported and which is correct: the City of Toronto Topographic
+Mapping Building Outlines (557,694 outlines, used in the Track A experiment)
+were never applied to the shipped product.
+
+What changed:
+- `data/lidar/mask_chm.py` (new): footprints rasterized at 1 m with a 2 m
+  buffer (Track A method: 4326 -> 3857 for the buffer -> back to 4326), CHM set
+  to NaN under the mask BEFORE any metric computation. Output (gitignored):
+  `data/lidar/wcs/ward12_chm_full_masked.tif`.
+- `data/lidar/calibrate_lidar_masked.py` (new): P(DBH>=30) and P(DBH>61) refit
+  on the masked CHM, NaN treated as nodata in the sampling windows. Overwrites
+  `data/calibration_lidar.json` (same schema). The JSON limitations text was
+  updated: mapped buildings no longer contribute peaks; the residual risk is
+  structures missing from the footprint dataset.
+- `data/lidar/parcel_canopy_masked.py` (new): identical to parcel_canopy.py
+  except the masked CHM input and NaN excluded from the valid-pixel selector
+  (required so NaN cannot poison the max-CHM reduce or the roughness
+  convolution). Same thresholds, same roughness gate source, same peak logic:
+  the mask effect is isolated. Its output replaced
+  `data/parcel_canopy_ward12.json` (same schema, same filename, same API
+  contract; only the values changed).
+- `scripts/render_parcel_maps.py`: the green tint now reads the masked CHM
+  (NaN-safe grayscale fallback for the no-ortho base). All PNGs in
+  `public/parcels/` re-rendered.
+
+Measured effects (all numbers measured, nothing estimated):
+- Footprint coverage: 31,631 of the 557,694 outlines intersect the Ward 12
+  polygon (5.67% of the dataset). Their bounds (-79.47037, 43.64084,
+  -79.42046, 43.69557) sit just inside the ward bbox, as expected for
+  footprints. No ward area lacks footprints: coverage is ward-wide.
+- Mask size: 3,287,327 px (14.5% of the raster, 42.6% of valid ward pixels).
+  51.4% of the old >= 8 m tall band is now masked (roofs); 48.6% remains.
+  Zero non-masked pixels changed value; a footprint centroid spot check reads
+  NaN and unmasked street-tree pixels are bit-identical.
+- Sample parcel TOP-5293472 (1843 Eglinton Ave W, 336.9 m2 lot), before ->
+  after masking: tall_canopy_m2_ge6 114.3 -> 86.1; tall_canopy_m2_ge8 50.1 ->
+  37.6; max_chm_m 10.41 -> 10.41 (the max was a real tree, kept);
+  p_any_ge_30cm 0.2663 -> 0.3764; p_any_distinctive 0.0446 -> 0.0270;
+  peak_count 1 -> 2. The remaining roof tint on this parcel is a measured
+  dataset gap, not a code bug: City outline 391622 (LAST_GEOMETRY_MAINT
+  2021-10-05) under-covers the 2023 roof on its west side by about 3 m, which
+  the 2 m buffer does not reach (54 of the parcel's 112 old tall pixels sit
+  2.8+ m west of the outline edge).
+- Calibration refit on the masked CHM: fit set 9,811 trees (was 13,208;
+  3,401 trees dropped because their 3x3 window is fully under buffered
+  footprints). The AUCs did NOT collapse, they improved: P(DBH>=30) train AUC
+  0.826, 5-fold CV 0.826 +- 0.005 (was 0.763 / 0.763 +- 0.009); P(DBH>61)
+  train 0.896, CV 0.896 +- 0.010 (was 0.805 / 0.805 +- 0.009). Mechanism: the
+  old features were polluted by roof pixels at near-building trees; masking
+  cleans them. Standardized coefs shifted from (intercept -1.049, h +0.708,
+  area +0.400) to (-1.039, h +0.382, area +1.140): tall-canopy area is now the
+  dominant signal. Roughness gate refit to p5 = 0.772 m (was 0.46 m).
+- Ward distributions, lot tall_canopy_m2_ge8: median 32.9 -> 0.0 m2, p90
+  126.8 -> 43.8 m2, fraction of parcels > 0: 87.4% -> 42.0%. Lot
+  P(any >= 30 cm): median 0.39 -> 0.053, fraction > 0.5: 32.0% -> 19.7%.
+- Parcels with real trees kept their canopy: 510 parcels still show >= 100 m2
+  at >= 8 m with P(any>=30) > 0.8; the largest (TOP-5341095, 1466 St Clair Ave
+  W) moved 79,894 -> 75,766 m2, a 5% trim of building-adjacent canopy.
+- Visual verification on 5 re-rendered maps: TOP-5392942 (346 Westmoreland Ave
+  N, industrial roof 3,768.3 -> 0.0 m2), TOP-5405563 (361 Symington Ave),
+  TOP-5457188 (113 Sterling Rd), TOP-5429950 (720 Ossington Ave, 663.8 ->
+  0.0 m2): no green tint on any rooftop, green only on real trees.
+  TOP-5293472 shows the small residual roof patch documented above.
+
+Limitations restated, unchanged in kind: 2023 LiDAR vintage; the calibration
+was fit on managed street trees and transfer to private backyard trees is
+approximate; the footprint dataset is maintained to 2021 and under-covers some
+2023 roofs (measured example above); screening signal only, not a permit
+determination.

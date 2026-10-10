@@ -10,23 +10,29 @@ export interface ScreenResult {
   imagery_vintage: string;
   sample: boolean;
   lot: {
-    crown_count: number;
+    tall_canopy_m2_ge6: number;
+    tall_canopy_m2_ge8: number;
+    max_chm_m: number | null;
     canopy_pct: number;
     p_any_ge_30cm: number;
     p_any_distinctive: number;
-    crowns: {
-      polygon: [number, number][];
-      crown_diameter_m: number;
-      dbh_est_cm: number;
-      dbh_pi95: [number, number];
-      p_ge_30cm: number;
-      p_gt_61cm: number;
-    }[];
+    crowns: never[];
   };
-  neighbour_6m: { crown_count: number; p_any_ge_30cm: number; p_any_distinctive: number };
+  neighbour_6m: {
+    tall_canopy_m2_ge6: number;
+    tall_canopy_m2_ge8: number;
+    max_chm_m: number | null;
+    p_any_ge_30cm: number;
+    p_any_distinctive: number;
+  };
   verdict: string;
-  fee_line: string | null;
-  method: { detection_f1: number; sample: boolean; note: string };
+  method: {
+    vintage: string;
+    calibration_auc: number;
+    calibration_n: number;
+    sample: boolean;
+    note: string;
+  };
   pilot_scope: string;
 }
 
@@ -34,17 +40,19 @@ function pct(p: number) {
   return `${Math.round(p * 100)}%`;
 }
 
-function crownBadge(c: ScreenResult["lot"]["crowns"][number], t: Strings) {
-  if (c.p_ge_30cm >= 0.5) return <span className="badge mature">{t.screen.likelyMature}</span>;
-  if (c.p_ge_30cm >= 0.2) return <span className="badge possible">{t.screen.maybeMature}</span>;
-  return <span className="badge young">{t.screen.young}</span>;
+function m2(v: number) {
+  return v >= 100 ? `${Math.round(v)}` : v.toFixed(1);
+}
+
+function height(v: number | null) {
+  return v === null ? "–" : `${v.toFixed(1)}`;
 }
 
 export default function ScreeningCard({ result, t }: { result: ScreenResult; t: Strings }) {
   const s = t.screen;
+  const m = result.method;
   return (
     <article className="screencard" aria-live="polite">
-      {result.sample && <div className="samplebanner">{s.sampleBanner}</div>}
       <div className="screencard-head">
         <h2 className="display">{s.lotLabel}: {result.address}</h2>
         <div className="screencard-meta">
@@ -58,8 +66,12 @@ export default function ScreeningCard({ result, t }: { result: ScreenResult; t: 
 
       <div className="statgrid">
         <div className="stat">
-          <div className="k">{s.crownsDetected}</div>
-          <div className="v">{result.lot.crown_count}</div>
+          <div className="k">{s.tallCanopyArea}</div>
+          <div className="v">{m2(result.lot.tall_canopy_m2_ge8)}<small> m²</small></div>
+        </div>
+        <div className="stat">
+          <div className="k">{s.maxHeight}</div>
+          <div className="v">{height(result.lot.max_chm_m)}<small> m</small></div>
         </div>
         <div className="stat">
           <div className="k">{s.canopyCover}</div>
@@ -75,49 +87,22 @@ export default function ScreeningCard({ result, t }: { result: ScreenResult; t: 
         </div>
       </div>
 
-      <ParcelMap parcelId={result.parcel_id} sample={result.sample} t={t} />
-
-      {result.lot.crowns.length > 0 && (
-        <div className="crownlist">
-          <h3>{s.crownListTitle}</h3>
-          {result.lot.crowns.map((c, i) => (
-            <div className="crownrow" key={i}>
-              <div className="crown-name">
-                {s.crownLabel(i + 1)}
-                {crownBadge(c, t)}
-              </div>
-              <div>
-                {s.crownDiameter}: <strong>{c.crown_diameter_m} m</strong>
-                <div className="dim">
-                  {s.dbhEstimate}: <strong>{c.dbh_est_cm} cm</strong> ({s.pi95}: {c.dbh_pi95[0]}–{c.dbh_pi95[1]} cm)
-                </div>
-              </div>
-              <div>
-                {s.pGe30}: <strong>{pct(c.p_ge_30cm)}</strong>
-                <div className="dim">{s.pGt61}: <strong>{pct(c.p_gt_61cm)}</strong></div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <ParcelMap parcelId={result.parcel_id} t={t} />
 
       <div className="neighbour">
         <h3>{s.neighbourTitle}</h3>
         <p className="dim">{s.neighbourWhy}</p>
         <div className="nbstats">
-          <div><div className="dim">{s.crownsDetected}</div><div className="v">{result.neighbour_6m.crown_count}</div></div>
+          <div><div className="dim">{s.tallCanopyArea}</div><div className="v">{m2(result.neighbour_6m.tall_canopy_m2_ge8)} m²</div></div>
+          <div><div className="dim">{s.maxHeight}</div><div className="v">{height(result.neighbour_6m.max_chm_m)} m</div></div>
           <div><div className="dim">{s.pAnyMature}</div><div className="v">{pct(result.neighbour_6m.p_any_ge_30cm)}</div></div>
           <div><div className="dim">{s.pAnyDistinctive}</div><div className="v">{pct(result.neighbour_6m.p_any_distinctive)}</div></div>
         </div>
       </div>
 
-      {result.fee_line && <div className="feeline">{result.fee_line}</div>}
-
       <div className="honesty">
         <p className="methodline">
-          {result.method.sample
-            ? s.sampleMethod
-            : s.methodLine(result.method.detection_f1.toFixed(2))}
+          {s.methodLine(m.calibration_auc.toFixed(2), m.calibration_n.toLocaleString("en-US"))}
         </p>
         <p>{s.honesty}</p>
         <p>{s.vintageCaveat}</p>

@@ -131,7 +131,7 @@ export default function Explorer({ lang }: { lang: Lang }) {
       </form>
       <p className="examples">
         {t.exampleAddresses}{" "}
-        {["407 Arlington Ave", "401 Arlington Ave", "409 Arlington Ave"].map((a, i) => (
+        {["1843 Eglinton Ave W", "1845 Eglinton Ave W", "1849 Eglinton Ave W"].map((a, i) => (
           <span key={a}>
             {i > 0 && " · "}
             <button className="linklike" type="button" onClick={() => { setQ(a); runScreen(a); }}>

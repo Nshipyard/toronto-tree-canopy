@@ -12,7 +12,7 @@ const TOOLS = [
   {
     name: "canopy_screen",
     description:
-      "Per-lot tree screening for one Toronto address in the Ward 12 (Davenport) pilot: detected crown polygons with estimated trunk diameters (95% prediction intervals), per-crown probabilities of clearing the Private Tree By-law thresholds (30 cm permit threshold; 61 cm Distinctive tier), the 6 m neighbour-buffer rollup matching the by-law site-plan rule, canopy percent, a plain-English verdict, and the method note with detection F1 and imagery vintage. Screening signal only; not a permit determination. Addresses outside the pilot return a 404-style error.",
+      "Per-lot tree screening for one Toronto address in the Ward 12 (Davenport) pilot, from measured 2023 airborne LiDAR (1 m canopy height model): tall-canopy area at the 6 m and 8 m thresholds, max height, canopy percent, and calibrated probabilities of a mature tree (30 cm permit threshold) and a Distinctive tree (61 cm tier), for the lot and the 6 m neighbour buffer matching the by-law site-plan rule, plus a plain-English verdict and the method note with calibration AUC. The crowns array is reserved for a future segmentation win and currently empty. Screening signal only; not a permit determination. Addresses outside Ward 12 return a 404-style error.",
     inputSchema: {
       type: "object",
       properties: {
@@ -25,7 +25,7 @@ const TOOLS = [
   {
     name: "parcel_crowns",
     description:
-      "Detected crowns for one pilot parcel by parcel ID (e.g. 'TOP-W12-0103'): crown polygons, crown diameters, estimated DBH with 95% prediction intervals, per-crown 30 cm / 61 cm probabilities, parcel rollups, and the 6 m neighbour-buffer rollup. Screening signal only; not a permit determination.",
+      "Parcel screening payload for one Ward 12 parcel by parcel ID (e.g. 'TOP-5293472'): measured 2023 LiDAR tall-canopy metrics, calibrated 30 cm / 61 cm probabilities, the 6 m neighbour-buffer rollup, and the crowns array (reserved for a future segmentation win; currently empty). Screening signal only; not a permit determination.",
     inputSchema: {
       type: "object",
       properties: {
@@ -87,7 +87,7 @@ async function handle(msg: unknown) {
           if (!found) {
             return err(id, -32001, JSON.stringify({ error: `parcel ${parcelId} not found`, pilot_scope: PILOT_SCOPE }));
           }
-          return ok(id, textResult(buildScreenPayload(found.parcel, found.parcel.address, lang, found.sample)));
+          return ok(id, textResult(buildScreenPayload(found, found.address, lang)));
         }
         return err(id, -32602, `Unknown tool ${name}`);
       } catch (e) {

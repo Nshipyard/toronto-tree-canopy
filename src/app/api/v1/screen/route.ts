@@ -4,8 +4,9 @@ import { pickLang } from "@/lib/i18n";
 
 // GET /api/v1/screen?address=…&lang=en|fr
 // Resolves the address via the City's Address Points, runs point-in-polygon
-// against the pilot parcels, and returns the per-parcel screening payload.
-// Outside the pilot parcels: HTTP 404.
+// against the Ward 12 parcels, and returns the measured 2023 LiDAR canopy
+// payload for the lot plus the 6 m neighbour buffer. Screening signal only;
+// never a permit determination. Outside Ward 12: HTTP 404.
 export async function GET(req: NextRequest) {
   const params = new URL(req.url).searchParams;
   const address = (params.get("address") ?? "").trim();
@@ -18,15 +19,7 @@ export async function GET(req: NextRequest) {
   }
   try {
     const payload = await screenAddress(address, lang);
-    const { sample, ...rest } = payload;
-    return NextResponse.json({
-      ...rest,
-      method: {
-        detection_f1: payload.method.detection_f1,
-        sample: payload.method.sample,
-        note: "Screening signal only; not a permit determination.",
-      },
-    });
+    return NextResponse.json(payload);
   } catch (e) {
     if (e instanceof ScreenError) {
       return NextResponse.json(e.body, { status: e.status });

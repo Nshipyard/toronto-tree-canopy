@@ -275,3 +275,82 @@ can support a much weaker per-parcel canopy-percent product only, with
 known MAE ~0.16 and 2018 vintage; it cannot answer the 30 cm / 61 cm
 by-law question. Next step if the product matters: commercial leaf-on
 imagery or higher-resolution LiDAR (procurement decision, not tested here).
+
+## Track B: tall-canopy LiDAR screen (2026-10-10, SHIPPED)
+
+Round 1 shelved individual-crown detection. Track B ships the guaranteed-shippable
+product instead: per-parcel tall-canopy STRUCTURE from 2023 LiDAR plus a
+statistically calibrated mature-tree probability. No crown detection anywhere.
+
+### Full-ward CHM
+
+- Source: NRCan HRDEM Mosaic WCS (dsm + dtm), TRCA GTA_2023, 2023 vintage.
+- Fetch: `data/lidar/fetch_ward12_full.py`, 40 chunks (4x4 grid at 0.015 deg over
+  lon -79.47..-79.41, lat 43.64..43.70, plus a west extension column because the
+  ward's western edge sits 0.0006 deg west of the round-1 grid). Reuses cached
+  round-1 chunks; 21 fetched fresh 2026-10-10.
+- Build: `data/lidar/build_chm_full.py` mosaics to 4994x4540 px, CHM = DSM-DTM,
+  nodata -9999, clipped to [-2, 60] m, masked to the Ward 12 polygon.
+  Output (gitignored): `data/lidar/wcs/ward12_chm_full.tif`.
+- Ward stats: 7,723,049 valid px; pixel 1.064 m E-W x 1.471 m N-S (1.566 m2);
+  median CHM 4.02 m, p99 21.45 m; 39.3% of ward pixels > 6 m, 23.5% >= 8 m
+  (dense urban fabric: roofs dominate the tall band, stated everywhere).
+- Two bugs caught before shipping: (1) the ward mask was inverted on the first
+  build (geometry_mask invert semantics), blanking the ward interior; caught by
+  checking the ward centroid pixel. (2) the street-tree CSV's WARD column uses a
+  different ward numbering than the current 25 wards: trees geometrically inside
+  the Davenport polygon carry WARD='09'; filtering WARD=='12' selects 18,077 trees
+  that are NOT in Ward 12. Tree selection is geometric (point in ward polygon).
+
+### Calibration: P(DBH >= 30 cm | LiDAR height, canopy area)
+
+- Script: `data/lidar/calibrate_lidar.py`. Output: `data/calibration_lidar.json`.
+- Fit set: 13,208 street trees geometrically inside the Ward 12 polygon with known
+  DBH (of 13,305 inside; 4 lacked CHM coverage). 29.5% >= 30 cm, 7.2% > 61 cm.
+- Features per tree: h = max CHM in ~3 m window; area = CHM >= 6 m area inside
+  5 m radius (elliptical footprint, 51 px). Logistic regression, standardized.
+- Generic P(DBH>=30): train AUC 0.763, 5-fold CV AUC 0.763 +- 0.009.
+  Coefficients (standardized): intercept -1.049, h +0.708, area +0.400.
+- Generic P(DBH>61): train AUC 0.805, CV 0.805 +- 0.009.
+- Per-genus P(DBH>=30), n >= 500 (reported, not shipped; genus unknown at
+  inference): Acer 3422 / 0.776, Gleditsia 1042 / 0.802, Picea 668 / 0.757,
+  Quercus 809 / 0.764, Tilia 672 / 0.807, Ulmus 675 / 0.707, Prunus 612 / 0.597.
+  Prunus (ornamental cherries/plums) at 0.597 shows height barely predicts DBH
+  for small ornamentals; the generic model absorbs this as noise.
+- Binned calibration (deciles, fit set), predicted -> observed: 0.06->0.15,
+  0.09->0.09, 0.14->0.12, 0.20->0.15, 0.25->0.17, 0.30->0.20, 0.34->0.28,
+  0.40->0.46, 0.50->0.65, 0.66->0.69. Monotonic; slight overprediction mid-range.
+- Roughness gate: CHM std in the 5 m window at fit trees: p1 0.085 m, p5 0.46 m,
+  median 2.09 m. Peaks smoother than p5 (0.46 m) are treated as structures
+  (flat roofs) and excluded from parcel scoring. The sub-p5 trees are mostly
+  small ornamentals, so the exclusion barely moves P(mature).
+- Stated limitations: street trees are managed road-allowance trees (pruned,
+  spaced); transfer to private trees is approximate. The model conditions on
+  tree presence, so pitched roofs passing the roughness gate still inflate
+  parcel rollups. Screening signal only.
+
+### Per-parcel metrics: 27,104 / 27,104 parcels
+
+- Script: `data/lidar/parcel_canopy.py`. Output: `data/parcel_canopy_ward12.json`
+  (22 MB, keyed by parcel id; includes WGS84 ring/bbox/centroid so the API does
+  point-in-polygon without the 14 MB parcels file).
+- Per parcel, for the LOT and the 6 m NEIGHBOUR BUFFER (buffer minus lot):
+  tall-canopy area >= 6 m and >= 8 m (m2), max CHM (m), canopy percent
+  (tall-canopy area / parcel area_m2, both thresholds), calibrated
+  P(any tree >= 30 cm) and P(any tree > 61 cm).
+- Probability method: connected components of the >= 6 m mask (one apex per
+  contiguous tall structure: a flat roof is one peak, a tree crown is one peak);
+  per parcel, the highest pixel of each touching component; roughness gate;
+  generic logistic scores; rollup 1 - prod(1 - p_i). Deterministic, no ML.
+- Ward distributions (lot): tall-canopy >= 8 m median 32.9 m2, p90 126.8 m2,
+  87.4% of parcels > 0; P(any >= 30 cm) median 0.39, 32.0% > 0.5, 2.2% > 0.8.
+  High-P parcels are genuine tall-tree cases (max CHM 15-32 m).
+
+### Upgrade paths (not blocking)
+
+- Track A fine CHM (0.25/0.5 m): if it lands, rerun calibrate_lidar.py and
+  parcel_canopy.py at the finer GSD; the API contract is resolution-agnostic.
+- 2018 land-cover tree/building classes could mask tall pixels to tree canopy,
+  at the cost of a 5-year vintage mismatch; not attempted.
+- A building-footprint mask (City open data) would remove the pitched-roof
+  inflation the roughness gate cannot catch.

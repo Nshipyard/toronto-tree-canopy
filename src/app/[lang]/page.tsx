@@ -2,6 +2,7 @@ import Link from "next/link";
 import Explorer from "@/components/Explorer";
 import McpConnect from "@/components/McpConnect";
 import { LANGS, STRINGS, pickLang } from "@/lib/i18n";
+import { loadCalibration } from "@/lib/canopy";
 
 export function generateStaticParams() {
   return LANGS.map((lang) => ({ lang }));
@@ -20,6 +21,9 @@ export default async function LangPage({ params }: { params: Promise<{ lang: str
   const l = pickLang(lang);
   const t = STRINGS[l];
   const other = l === "en" ? "fr" : "en";
+  const cal = loadCalibration();
+  const auc = cal.generic_ge_30.cv_auc_mean.toFixed(2);
+  const calN = cal.n_trees.toLocaleString("en-US");
 
   return (
     <div className="wrap">
@@ -66,7 +70,7 @@ export default async function LangPage({ params }: { params: Promise<{ lang: str
           </div>
           <div className="accbox">
             <h3>{t.method.accuracyTitle}</h3>
-            <p>{t.method.accuracyBody}</p>
+            <p>{t.method.accuracyBody(auc, calN)}</p>
           </div>
         </section>
 

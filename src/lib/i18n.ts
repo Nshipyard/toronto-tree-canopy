@@ -14,104 +14,98 @@ const en = {
   siteName: "Toronto Tree Canopy",
   eyebrow: "Open Nshipyard",
   tagline:
-    "Type a Toronto address. Get a per-lot tree screening: how many crowns the detector found, the probability any clears the 30 cm permit threshold, canopy percent, and what to do next.",
-  addressPlaceholder: "e.g. 407 Arlington Ave, Toronto",
+    "Type a Toronto address. Get a per-lot tree screening from 2023 LiDAR: tall-canopy area, tallest surface, canopy percent, and the calibrated chance a mature tree stands on the lot.",
+  addressPlaceholder: "e.g. 1843 Eglinton Ave W, Toronto",
   searchButton: "Screen this lot",
   searching: "Screening…",
   switchLang: "Français",
   exampleAddresses: "Try:",
   heroStats:
-    "Ward 12 (Davenport) pilot · crowns detected from City of Toronto 2022 orthorectified aerial imagery · screening signal, not a permit determination",
+    "Ward 12 (Davenport) pilot · tall-canopy structure measured from 2023 airborne LiDAR (1 m) · mature-tree probability calibrated on 13,208 Ward 12 street trees · screening signal, not a permit determination",
 
   suggestLabel: "Address suggestions",
 
   screen: {
     lotLabel: "Lot",
     parcelId: "Parcel",
-    imageryVintage: "Imagery vintage",
-    crownsDetected: "Crowns detected",
-    canopyCover: "Canopy cover",
-    pAnyMature: "Chance any crown clears 30 cm",
-    pAnyDistinctive: "Chance any crown clears 61 cm",
-    neighbourTitle: "Neighbouring crowns (within 6 m of the boundary)",
+    imageryVintage: "Canopy vintage",
+    tallCanopyArea: "Tall canopy (8 m and up)",
+    maxHeight: "Tallest surface",
+    canopyCover: "Tall-canopy cover",
+    pAnyMature: "Chance of a mature tree (30 cm+)",
+    pAnyDistinctive: "Chance of a Distinctive tree (61 cm+)",
+    neighbourTitle: "Neighbouring tall canopy (within 6 m of the boundary)",
     neighbourWhy:
-      "The by-law site plan must show all trees 30 cm and up on adjacent properties within 6 m of the boundary, so the screen counts crowns across that line too.",
-    crownListTitle: "Detected crowns",
-    crownLabel: (i: number) => `Crown ${i}`,
-    crownDiameter: "Crown diameter",
-    dbhEstimate: "Estimated trunk diameter (DBH)",
-    pi95: "95% prediction interval",
-    pGe30: "Chance trunk is 30 cm or more",
-    pGt61: "Chance trunk is over 61 cm (Distinctive tier)",
-    likelyMature: "likely mature",
-    maybeMature: "possible",
-    young: "young",
+      "The by-law site plan must show all trees 30 cm and up on adjacent properties within 6 m of the boundary, so the screen measures the 6 m band around the lot too.",
     honesty:
-      "Screening signal only; not a permit determination. The City's Private Tree By-law (Municipal Code Chapter 813, Article III) requires a permit before injuring or removing any private tree 30 cm or more in trunk diameter, measured at 1.4 m; the September 2026 amendments added a Distinctive tier above 61 cm with stronger protections. Only a certified arborist can confirm trunk diameter on site.",
+      "Screening signal only; not a permit determination. The tall-canopy numbers measure elevated surface 6 m and up from 2023 LiDAR: trees and tall structures such as buildings read the same. The mature-tree chance is a statistical calibration fit on the City's street-tree inventory (managed road-allowance trees, pruned and spaced by the City), applied to tree-like LiDAR peaks on the lot; peaks smoother than 95% of measured street-tree crowns are treated as roofs and excluded, but pitched roofs still read as canopy. The City's Private Tree By-law (Municipal Code Chapter 813, Article III) requires a permit before injuring or removing any private tree 30 cm or more in trunk diameter, measured at 1.4 m; the September 2026 amendments added a Distinctive tier above 61 cm with stronger protections. Only a certified arborist can confirm trunk diameter on site.",
     vintageCaveat:
-      "Imagery is from 2022. Trees removed after that are invisible to this screen, and new growth since then is missing too.",
-    sampleBanner:
-      "Sample data. These parcels are synthetic placeholders so the app can run; the Ward 12 pilot will replace them with measured detections.",
-    methodLine: (f1: string) => `Detection F1 ${f1}, measured on hand-labeled pilot tiles (pilot number pending).`,
-    sampleMethod:
-      "Detection F1 shown is a sample placeholder; the pilot has not measured its own accuracy yet.",
-    feeLine: (n: number, total: string) =>
-      `If an arborist confirms ${n} ${n === 1 ? "tree" : "trees"} for removal, the 2026 construction-related permit fee is $436.39 per tree, for ${total}.`,
-    nextStep: "Get an arborist report before planning around these crowns.",
+      "Canopy structure is from 2023 LiDAR. Trees removed after that are invisible to this screen, and growth since then is missing too.",
+    methodLine: (auc: string, n: string) =>
+      `Mature-tree calibration AUC ${auc}, fit on ${n} Ward 12 street trees with known trunk diameters against their LiDAR height and canopy area.`,
+    nextStep: "Get an arborist report before planning around these numbers.",
     outsidePilot:
-      "This address falls outside the Ward 12 (Davenport) pilot area. The screen covers the pilot parcels only.",
+      "This address falls outside the Ward 12 (Davenport) pilot area. The screen covers Ward 12 parcels only.",
     notFound: "Address not found in the City's Address Points.",
     lookupError: "The screening request failed. Check the address and try again.",
-    noScreenYet: "Screen a pilot address to see the per-lot crown map and verdict.",
+    noScreenYet: "Screen a Ward 12 address to see the lot's tall-canopy measurements and verdict.",
   },
 
   verdict: {
-    noCrowns: (nb: number) =>
-      `No crowns detected on this lot in 2022 imagery.${nb > 0 ? ` The screen found ${nb} ${nb === 1 ? "crown" : "crowns"} on neighbouring parcels within 6 m of the boundary; the by-law site plan must show trees 30 cm and up there too.` : ""}`,
-    withCrowns: (n: number, canopy: string, p30: string, p61: string, nb: number) =>
-      `${n} ${n === 1 ? "crown" : "crowns"} detected on this lot in 2022 imagery, covering ${canopy} of the parcel. Chance at least one clears the 30 cm permit threshold: ${p30}. Chance at least one clears the 61 cm Distinctive tier: ${p61}.${nb > 0 ? ` The 6 m neighbour buffer holds ${nb} more ${nb === 1 ? "crown" : "crowns"}.` : ""} Treat this as a screening signal, then get an arborist before planning around them.`,
+    noTallCanopy: (p30: string, bufArea: string, bufP30: string) =>
+      `2023 LiDAR found no surface 8 m or taller on this lot. The calibrated chance a mature tree (trunk 30 cm or more) stands on the lot is ${p30}.${bufArea !== "0" && bufArea !== "0.0" ? ` The 6 m neighbour band holds ${bufArea} m² of tall canopy with a ${bufP30} mature-tree chance; the by-law site plan must show trees 30 cm and up there too.` : ""} Treat this as a screening signal, then get an arborist before planning around it.`,
+    withCanopy: (
+      area8: string,
+      pct8: string,
+      maxH: string,
+      p30: string,
+      p61: string,
+      bufArea: string,
+      bufP30: string,
+      lotPeaks: number,
+    ) =>
+      `2023 LiDAR measured ${area8} m² of surface 8 m or taller on this lot (${pct8}% of the parcel), peaking at ${maxH} m. Calibrated on the street-tree inventory, the chance at least one mature tree (trunk 30 cm or more) stands on the lot is ${p30}; the chance of a Distinctive tree (over 61 cm) is ${p61}.${lotPeaks === 0 ? " No tree-like LiDAR peaks 6 m or taller were found on the lot itself." : ""}${bufArea !== "0" && bufArea !== "0.0" ? ` The 6 m neighbour band holds ${bufArea} m² of tall canopy with a ${bufP30} mature-tree chance; the by-law site plan must show trees 30 cm and up there too.` : ""} This is a screening signal from LiDAR structure, not a count of individual crowns; get an arborist before planning around it.`,
   },
 
   map: {
-    title: "Crown map",
-    legendMature: "crown likely 30 cm or more (probability at least 50%)",
-    legendPossible: "crown possible",
+    title: "Tall-canopy map",
+    legendTall: "tall canopy (8 m and up, 2023 LiDAR)",
     legendParcel: "parcel boundary",
     legendBuffer: "6 m neighbour buffer",
     scaleBar: (m: number) => `${m} m`,
     missingImage:
-      "The aerial map image for this parcel is not rendered yet. Renders are produced when the parcel dataset ships, so this appears after the next pipeline run.",
+      "The canopy map for this parcel is not rendered yet. Renders are produced per parcel from the 2023 LiDAR surface, so this appears after the next render batch.",
   },
 
   download: {
     kicker: "Open data",
-    title: "Download the pilot dataset",
-    body: "Every parcel in the pilot with its detected crowns, estimated trunk diameters with 95% prediction intervals, and permit-threshold probabilities. MIT licence for the code; data carries the City of Toronto open data terms.",
+    title: "Download the Ward 12 canopy dataset",
+    body: "Every Ward 12 parcel with its measured 2023 LiDAR tall-canopy metrics (area at the 6 m and 8 m thresholds, max height, canopy percent) and calibrated mature-tree probabilities, for the lot and the 6 m neighbour buffer. MIT licence for the code; data carries the City of Toronto and NRCan open data terms.",
     geojson: "Download GeoJSON",
     csv: "Download CSV",
   },
 
   method: {
     kicker: "How the screen works",
-    title: "From 2022 aerial imagery to a per-lot verdict",
-    step1t: "Detect crowns",
+    title: "From 2023 LiDAR to a per-lot verdict",
+    step1t: "Measure canopy structure",
     step1b:
-      "A DeepForest detection model (RetinaNet with pre-trained weights, MIT licence) draws crown polygons on the City of Toronto's 2022 orthorectified aerial imagery, 8 cm resolution. Instance delineation is the hard part, so per-tree counts carry a stated error bar.",
-    step2t: "Estimate trunk diameter",
+      "The NRCan HRDEM mosaic (CanElevation series, open data) serves 2023 airborne LiDAR flown for the Toronto and Region Conservation Authority over Toronto at 1 m. Surface minus terrain gives a canopy height model; per parcel the screen reports tall-canopy area at 6 m and 8 m, max height, and canopy percent, for the lot and for the 6 m neighbour band the by-law's site-plan rule cares about.",
+    step2t: "Calibrate mature-tree probability",
     step2b:
-      "Crown diameter is converted to trunk diameter (DBH, measured at 1.4 m) with allometry fit on Toronto's 688,335 street-tree records, species by species, urban trees only. The model never guesses species from colour; every estimate reports a 95% prediction interval.",
+      "A logistic regression maps LiDAR height and canopy area around 13,208 Ward 12 street trees to the probability the trunk clears 30 cm (and 61 cm for the Distinctive tier). Street trees are managed road-allowance trees, so the transfer to private trees is approximate; the fit quality is reported as AUC below.",
     step3t: "Score against the by-law",
     step3b:
-      "Each crown gets the probability its trunk clears the 30 cm permit threshold of the Private Tree By-law (Municipal Code Chapter 813, Article III) and the 61 cm Distinctive tier added in September 2026. Crowns are also rolled up over the 6 m neighbour buffer, matching the by-law's site-plan rule.",
-    accuracyTitle: "Accuracy (pilot will measure)",
-    accuracyBody:
-      "The pilot measures detection F1 against hand-labeled tiles and calibration R2 against held-out street trees. Until the pipeline reports its own numbers, the screen carries sample placeholders, marked as such.",
+      "LiDAR peaks 6 m and up on the lot are scored with the calibration and rolled up to the chance at least one mature tree stands on the lot, and the same for the 6 m neighbour band. Tall structures such as buildings read as canopy in LiDAR, so the number is a screening signal, never a permit determination.",
+    accuracyTitle: "Accuracy (measured)",
+    accuracyBody: (auc: string, n: string) =>
+      `The mature-tree calibration scores AUC ${auc} on ${n} Ward 12 street trees with known trunk diameters (5-fold cross-validation). Individual crown detection was tried first and failed honestly: pre-trained DeepForest F1 0.023, fine-tuned F1 0.000, and 1 m watershed F1 0.046 on hand-labeled tiles, because all five City orthophoto vintages are leaf-off spring captures. This screen sidesteps detection entirely: it measures canopy structure, not crowns.`,
   },
 
   mcp: {
     kicker: "For AI agents",
     title: "Connect your agent",
-    body: "The screen is available over MCP (Streamable HTTP) and a plain REST API. Two tools: canopy_screen takes an address and returns the full screening payload; parcel_crowns takes a parcel ID and returns its crowns. Paste the block into your harness and point it at this server.",
+    body: "The screen is available over MCP (Streamable HTTP) and a plain REST API. Two tools: canopy_screen takes an address and returns the full screening payload; parcel_crowns takes a parcel ID and returns its parcel payload (the crowns array is reserved for a future segmentation win and currently empty). Paste the block into your harness and point it at this server.",
     tabs: { chatgpt: "ChatGPT", claude: "Claude", claudecode: "Claude Code", cli: "CLI", other: "Other" },
     cardTitle: "Paste into {tab}",
     otherTitle: "Connect any MCP client",
@@ -123,19 +117,19 @@ const en = {
     openapiSpec: "OpenAPI spec",
     restExample: "REST example",
     pChatgpt:
-      "Add this MCP server in ChatGPT (Developer mode > Tools > Add MCP server):\n\nServer URL: {origin}/mcp\nName: {displayName}\n\nThen ask: \"Screen {displayName} for 407 Arlington Ave\" or use canopy_screen with any Toronto address in the Ward 12 pilot.",
+      "Add this MCP server in ChatGPT (Developer mode > Tools > Add MCP server):\n\nServer URL: {origin}/mcp\nName: {displayName}\n\nThen ask: \"Screen {displayName} for 1843 Eglinton Ave W\" or use canopy_screen with any Toronto address in the Ward 12 pilot.",
     pClaude:
-      "Connect this MCP server in Claude (Settings > Integrations > Add):\n\nServer URL: {origin}/mcp\nName: {displayName}\n\nThen ask it to screen a Ward 12 address with canopy_screen, e.g. 407 Arlington Ave.",
+      "Connect this MCP server in Claude (Settings > Integrations > Add):\n\nServer URL: {origin}/mcp\nName: {displayName}\n\nThen ask it to screen a Ward 12 address with canopy_screen, e.g. 1843 Eglinton Ave W.",
     pClaudeCode:
-      "Claude Code connects to this MCP server with one command:\n\nclaude mcp add --transport http {slug} {origin}/mcp\n\nThen: \"Use canopy_screen to screen 407 Arlington Ave\" or parcel_crowns with a parcel ID like TOP-W12-0103.",
+      "Claude Code connects to this MCP server with one command:\n\nclaude mcp add --transport http {slug} {origin}/mcp\n\nThen: \"Use canopy_screen to screen 1843 Eglinton Ave W\" or parcel_crowns with a parcel ID like TOP-5293472.",
     pCli:
-      "Any JSON-RPC 2.0 client over Streamable HTTP works:\n\ncurl -s -X POST {origin}/mcp \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"canopy_screen\",\"arguments\":{\"address\":\"407 Arlington Ave\"}}}'",
+      "Any JSON-RPC 2.0 client over Streamable HTTP works:\n\ncurl -s -X POST {origin}/mcp \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"canopy_screen\",\"arguments\":{\"address\":\"1843 Eglinton Ave W\"}}}'",
   },
 
   footer: {
     wordmark: "Open Nshipyard",
     tagline: "Civic data tools, open source, built in Toronto.",
-    dataNote: "Screening from City of Toronto open data: Address Points, 2022 orthorectified imagery, street-tree inventory. Not legal or arboricultural advice.",
+    dataNote: "Screening from open data: 2023 airborne LiDAR via the NRCan HRDEM mosaic, City of Toronto Address Points and street-tree inventory. Not legal or arboricultural advice.",
   },
 };
 
@@ -143,104 +137,98 @@ const fr = {
   siteName: "Canopée des arbres de Toronto",
   eyebrow: "Open Nshipyard",
   tagline:
-    "Entrez une adresse de Toronto. Obtenez un dépistage par lot : le nombre de couronnes détectées, la probabilité qu'une d'elles atteigne le seuil de 30 cm, le pourcentage de couvert et les prochaines étapes.",
-  addressPlaceholder: "p. ex. 407 Arlington Ave, Toronto",
+    "Entrez une adresse de Toronto. Obtenez un dépistage par lot à partir du LiDAR de 2023 : superficie de canopée haute, surface la plus haute, pourcentage de couvert et probabilité calibrée qu'un arbre mature s'y trouve.",
+  addressPlaceholder: "p. ex. 1843 Eglinton Ave W, Toronto",
   searchButton: "Dépister ce lot",
   searching: "Dépistage…",
   switchLang: "English",
   exampleAddresses: "Essayez :",
   heroStats:
-    "Projet pilote du quartier 12 (Davenport) · couronnes détectées à partir des images aériennes orthorectifiées de 2022 de la Ville de Toronto · signal de dépistage, pas une décision de permis",
+    "Projet pilote du quartier 12 (Davenport) · structure de la canopée haute mesurée par LiDAR aéroporté de 2023 (1 m) · probabilité d'arbre mature calibrée sur 13 208 arbres de rue du quartier 12 · signal de dépistage, pas une décision de permis",
 
   suggestLabel: "Suggestions d'adresses",
 
   screen: {
     lotLabel: "Lot",
     parcelId: "Parcelle",
-    imageryVintage: "Millésime des images",
-    crownsDetected: "Couronnes détectées",
-    canopyCover: "Couvert de canopée",
-    pAnyMature: "Probabilité qu'une couronne atteigne 30 cm",
-    pAnyDistinctive: "Probabilité qu'une couronne dépasse 61 cm",
-    neighbourTitle: "Couronnes voisines (à moins de 6 m de la limite)",
+    imageryVintage: "Millésime de la canopée",
+    tallCanopyArea: "Canopée haute (8 m et plus)",
+    maxHeight: "Surface la plus haute",
+    canopyCover: "Couvert de canopée haute",
+    pAnyMature: "Probabilité d'un arbre mature (30 cm+)",
+    pAnyDistinctive: "Probabilité d'un arbre Distinctive (61 cm+)",
+    neighbourTitle: "Canopée haute voisine (à moins de 6 m de la limite)",
     neighbourWhy:
-      "Le plan de situation exigé par le règlement doit montrer tous les arbres de 30 cm et plus sur les propriétés adjacentes à moins de 6 m de la limite; le dépistage compte donc aussi les couronnes de l'autre côté de cette ligne.",
-    crownListTitle: "Couronnes détectées",
-    crownLabel: (i: number) => `Couronne ${i}`,
-    crownDiameter: "Diamètre de la couronne",
-    dbhEstimate: "Diamètre du tronc estimé (DHP)",
-    pi95: "Intervalle de prédiction à 95 %",
-    pGe30: "Probabilité que le tronc atteigne 30 cm ou plus",
-    pGt61: "Probabilité que le tronc dépasse 61 cm (catégorie Distinctive)",
-    likelyMature: "probablement mature",
-    maybeMature: "possible",
-    young: "jeune",
+      "Le plan de situation exigé par le règlement doit montrer tous les arbres de 30 cm et plus sur les propriétés adjacentes à moins de 6 m de la limite; le dépistage mesure donc aussi la bande de 6 m autour du lot.",
     honesty:
-      "Signal de dépistage seulement; ce n'est pas une décision de permis. Le règlement sur les arbres privés de la Ville (chapitre 813 du Code municipal, article III) exige un permis avant d'endommager ou d'abattre tout arbre privé de 30 cm ou plus de diamètre, mesuré à 1,4 m; les modifications de septembre 2026 ont ajouté une catégorie Distinctive au-delà de 61 cm avec des protections renforcées. Seul un arboriste certifié peut confirmer le diamètre du tronc sur place.",
+      "Signal de dépistage seulement; ce n'est pas une décision de permis. Les chiffres de canopée haute mesurent la surface élevée à 6 m et plus d'après le LiDAR de 2023 : les arbres et les structures hautes comme les bâtiments s'y lisent de la même façon. La probabilité d'arbre mature est un calibrage statistique ajusté sur l'inventaire des arbres de rue de la Ville (arbres d'emprise gérés, taillés et espacés par la Ville), appliqué aux pics LiDAR d'allure arborée du lot; les pics plus lisses que 95 % des couronnes d'arbres de rue mesurées sont traités comme des toits et exclus, mais les toits en pente se lisent encore comme de la canopée. Le règlement sur les arbres privés de la Ville (chapitre 813 du Code municipal, article III) exige un permis avant d'endommager ou d'abattre tout arbre privé de 30 cm ou plus de diamètre, mesuré à 1,4 m; les modifications de septembre 2026 ont ajouté une catégorie Distinctive au-delà de 61 cm avec des protections renforcées. Seul un arboriste certifié peut confirmer le diamètre du tronc sur place.",
     vintageCaveat:
-      "Les images datent de 2022. Les arbres abattus depuis sont invisibles à ce dépistage, et la croissance récente y manque aussi.",
-    sampleBanner:
-      "Données d'exemple. Ces parcelles sont des substituts synthétiques pour faire fonctionner l'application; le projet pilote du quartier 12 les remplacera par des détections mesurées.",
-    methodLine: (f1: string) => `F1 de détection ${f1}, mesuré sur des tuiles étiquetées à la main du projet pilote (chiffre du pilote à venir).`,
-    sampleMethod:
-      "Le F1 de détection affiché est une valeur d'exemple; le pilote n'a pas encore mesuré sa propre précision.",
-    feeLine: (n: number, total: string) =>
-      `Si un arboriste confirme ${n} ${n === 1 ? "arbre" : "arbres"} à abattre, les frais de permis 2026 pour travaux de construction sont de 436,39 $ par arbre, soit ${total}.`,
-    nextStep: "Obtenez un rapport d'arboriste avant de planifier autour de ces couronnes.",
+      "La structure de la canopée date du LiDAR de 2023. Les arbres abattus depuis sont invisibles à ce dépistage, et la croissance récente y manque aussi.",
+    methodLine: (auc: string, n: string) =>
+      `AUC de calibrage des arbres matures : ${auc}, ajustée sur ${n} arbres de rue du quartier 12 au diamètre connu, selon leur hauteur LiDAR et leur superficie de canopée.`,
+    nextStep: "Obtenez un rapport d'arboriste avant de planifier autour de ces chiffres.",
     outsidePilot:
-      "Cette adresse se situe hors de la zone du projet pilote du quartier 12 (Davenport). Le dépistage ne couvre que les parcelles du pilote.",
+      "Cette adresse se situe hors de la zone du projet pilote du quartier 12 (Davenport). Le dépistage ne couvre que les parcelles du quartier 12.",
     notFound: "Adresse introuvable dans les points d'adresse de la Ville.",
     lookupError: "La demande de dépistage a échoué. Vérifiez l'adresse et réessayez.",
-    noScreenYet: "Dépistez une adresse du pilote pour voir la carte des couronnes et le verdict du lot.",
+    noScreenYet: "Dépistez une adresse du quartier 12 pour voir les mesures de canopée haute et le verdict du lot.",
   },
 
   verdict: {
-    noCrowns: (nb: number) =>
-      `Aucune couronne détectée sur ce lot dans les images de 2022.${nb > 0 ? ` Le dépistage a trouvé ${nb} ${nb === 1 ? "couronne" : "couronnes"} sur les parcelles voisines à moins de 6 m de la limite; le plan de situation exigé par le règlement doit aussi montrer les arbres de 30 cm et plus à cet endroit.` : ""}`,
-    withCrowns: (n: number, canopy: string, p30: string, p61: string, nb: number) =>
-      `${n} ${n === 1 ? "couronne détectée" : "couronnes détectées"} sur ce lot dans les images de 2022, couvrant ${canopy} de la parcelle. Probabilité qu'au moins une atteigne le seuil de permis de 30 cm : ${p30}. Probabilité qu'au moins une dépasse la catégorie Distinctive de 61 cm : ${p61}.${nb > 0 ? ` La zone tampon de 6 m contient ${nb} ${nb === 1 ? "couronne" : "couronnes"} de plus.` : ""} Considérez ceci comme un signal de dépistage, puis obtenez un rapport d'arboriste avant de planifier autour d'elles.`,
+    noTallCanopy: (p30: string, bufArea: string, bufP30: string) =>
+      `Le LiDAR de 2023 n'a trouvé aucune surface de 8 m ou plus sur ce lot. La probabilité calibrée qu'un arbre mature (tronc de 30 cm ou plus) s'y trouve est de ${p30}.${bufArea !== "0" && bufArea !== "0.0" ? ` La bande voisine de 6 m contient ${bufArea} m² de canopée haute avec une probabilité d'arbre mature de ${bufP30}; le plan de situation exigé par le règlement doit aussi montrer les arbres de 30 cm et plus à cet endroit.` : ""} Considérez ceci comme un signal de dépistage, puis obtenez un rapport d'arboriste avant de planifier autour de ce lot.`,
+    withCanopy: (
+      area8: string,
+      pct8: string,
+      maxH: string,
+      p30: string,
+      p61: string,
+      bufArea: string,
+      bufP30: string,
+      lotPeaks: number,
+    ) =>
+      `Le LiDAR de 2023 a mesuré ${area8} m² de surface de 8 m ou plus sur ce lot (${pct8} % de la parcelle), culminant à ${maxH} m. Selon le calibrage sur l'inventaire des arbres de rue, la probabilité qu'au moins un arbre mature (tronc de 30 cm ou plus) s'y trouve est de ${p30}; celle d'un arbre Distinctive (plus de 61 cm) est de ${p61}.${lotPeaks === 0 ? " Aucun pic LiDAR d'allure arborée de 6 m ou plus n'a été trouvé sur le lot lui-même." : ""}${bufArea !== "0" && bufArea !== "0.0" ? ` La bande voisine de 6 m contient ${bufArea} m² de canopée haute avec une probabilité d'arbre mature de ${bufP30}; le plan de situation exigé par le règlement doit aussi montrer les arbres de 30 cm et plus à cet endroit.` : ""} Ceci est un signal de dépistage tiré de la structure LiDAR, pas un décompte de couronnes individuelles; obtenez un rapport d'arboriste avant de planifier autour de ce lot.`,
   },
 
   map: {
-    title: "Carte des couronnes",
-    legendMature: "couronne probablement de 30 cm ou plus (probabilité d'au moins 50 %)",
-    legendPossible: "couronne possible",
+    title: "Carte de la canopée haute",
+    legendTall: "canopée haute (8 m et plus, LiDAR 2023)",
     legendParcel: "limite de la parcelle",
     legendBuffer: "zone tampon de 6 m",
     scaleBar: (m: number) => `${m} m`,
     missingImage:
-      "La carte aérienne de cette parcelle n'est pas encore produite. Les rendus sont générés à chaque publication du jeu de données, donc elle apparaîtra après la prochaine exécution du pipeline.",
+      "La carte de canopée de cette parcelle n'est pas encore produite. Les rendus sont générés par parcelle à partir de la surface LiDAR de 2023, donc elle apparaîtra après le prochain lot de rendus.",
   },
 
   download: {
     kicker: "Données ouvertes",
-    title: "Télécharger le jeu de données pilote",
-    body: "Chaque parcelle du pilote avec ses couronnes détectées, les diamètres de tronc estimés avec intervalles de prédiction à 95 % et les probabilités liées aux seuils de permis. Code sous licence MIT; les données suivent les conditions des données ouvertes de la Ville de Toronto.",
+    title: "Télécharger le jeu de données de canopée du quartier 12",
+    body: "Chaque parcelle du quartier 12 avec ses mesures de canopée haute du LiDAR de 2023 (superficie aux seuils de 6 m et 8 m, hauteur maximale, pourcentage de couvert) et ses probabilités calibrées d'arbre mature, pour le lot et la zone tampon de 6 m. Code sous licence MIT; les données suivent les conditions des données ouvertes de la Ville de Toronto et de RNCan.",
     geojson: "Télécharger GeoJSON",
     csv: "Télécharger CSV",
   },
 
   method: {
     kicker: "Fonctionnement du dépistage",
-    title: "Des images aériennes de 2022 au verdict par lot",
-    step1t: "Détecter les couronnes",
+    title: "Du LiDAR de 2023 au verdict par lot",
+    step1t: "Mesurer la structure de la canopée",
     step1b:
-      "Un modèle de détection DeepForest (RetinaNet avec poids pré-entraînés, licence MIT) trace les polygones de couronnes sur les images aériennes orthorectifiées de 2022 de la Ville de Toronto, à 8 cm de résolution. La délimitation des instances est la partie difficile, donc les décomptes par arbre portent une marge d'erreur déclarée.",
-    step2t: "Estimer le diamètre du tronc",
+      "La mosaïque HRDEM de RNCan (série CanÉlévation, données ouvertes) diffuse le LiDAR aéroporté de 2023 capté pour l'Office de protection de la nature de Toronto et de la région, à 1 m. La surface moins le terrain donne un modèle de hauteur de canopée; par parcelle, le dépistage indique la superficie de canopée haute à 6 m et 8 m, la hauteur maximale et le pourcentage de couvert, pour le lot et pour la bande voisine de 6 m visée par la règle du plan de situation.",
+    step2t: "Calibrer la probabilité d'arbre mature",
     step2b:
-      "Le diamètre de la couronne est converti en diamètre du tronc (DHP, mesuré à 1,4 m) avec une allométrie ajustée sur les 688 335 arbres de rue de Toronto, espèce par espèce, arbres urbains seulement. Le modèle ne devine jamais l'espèce à partir de la couleur; chaque estimation présente un intervalle de prédiction à 95 %.",
+      "Une régression logistique relie la hauteur LiDAR et la superficie de canopée autour de 13 208 arbres de rue du quartier 12 à la probabilité que le tronc atteigne 30 cm (et 61 cm pour la catégorie Distinctive). Les arbres de rue sont des arbres d'emprise gérés, donc le transfert aux arbres privés est approximatif; la qualité de l'ajustement est exprimée en AUC ci-dessous.",
     step3t: "Évaluer selon le règlement",
     step3b:
-      "Chaque couronne reçoit la probabilité que son tronc atteigne le seuil de permis de 30 cm du règlement sur les arbres privés (chapitre 813 du Code municipal, article III) et la catégorie Distinctive de 61 cm ajoutée en septembre 2026. Les couronnes sont aussi cumulées sur la zone tampon de 6 m des voisins, comme l'exige la règle du plan de situation.",
-    accuracyTitle: "Précision (le pilote la mesurera)",
-    accuracyBody:
-      "Le pilote mesure le F1 de détection sur des tuiles étiquetées à la main et le R2 d'étalonnage sur des arbres de rue exclus de l'ajustement. En attendant les chiffres du pipeline, le dépistage porte des valeurs d'exemple, signalées comme telles.",
+      "Les pics LiDAR de 6 m et plus sur le lot sont notés avec le calibrage, puis cumulés en probabilité qu'au moins un arbre mature s'y trouve, et de même pour la bande voisine de 6 m. Les structures hautes comme les bâtiments se lisent comme de la canopée au LiDAR; le chiffre est donc un signal de dépistage, jamais une décision de permis.",
+    accuracyTitle: "Précision (mesurée)",
+    accuracyBody: (auc: string, n: string) =>
+      `Le calibrage des arbres matures obtient une AUC de ${auc} sur ${n} arbres de rue du quartier 12 au diamètre connu (validation croisée en 5 plis). La détection individuelle des couronnes a d'abord été tentée et a honnêtement échoué : F1 de 0,023 avec DeepForest pré-entraîné, 0,000 après ajustement, et 0,046 par ligne de partage des eaux à 1 m sur des tuiles étiquetées à la main, parce que les cinq millésimes d'orthophotos de la Ville sont des captures printanières sans feuilles. Ce dépistage contourne la détection : il mesure la structure de la canopée, pas les couronnes.`,
   },
 
   mcp: {
     kicker: "Pour les agents IA",
     title: "Connectez votre agent",
-    body: "Le dépistage est offert en MCP (HTTP diffusable) et en API REST simple. Deux outils : canopy_screen prend une adresse et renvoie le dépistage complet; parcel_crowns prend un identifiant de parcelle et renvoie ses couronnes. Collez le bloc dans votre harnais et pointez-le vers ce serveur.",
+    body: "Le dépistage est offert en MCP (HTTP diffusable) et en API REST simple. Deux outils : canopy_screen prend une adresse et renvoie le dépistage complet; parcel_crowns prend un identifiant de parcelle et renvoie ses données de parcelle (le tableau crowns est réservé à un futur gain de segmentation et est vide pour l'instant). Collez le bloc dans votre harnais et pointez-le vers ce serveur.",
     tabs: { chatgpt: "ChatGPT", claude: "Claude", claudecode: "Claude Code", cli: "CLI", other: "Autre" },
     cardTitle: "Coller dans {tab}",
     otherTitle: "Connecter tout client MCP",
@@ -252,19 +240,19 @@ const fr = {
     openapiSpec: "Spécification OpenAPI",
     restExample: "Exemple REST",
     pChatgpt:
-      "Ajoutez ce serveur MCP dans ChatGPT (mode Développeur > Outils > Ajouter un serveur MCP) :\n\nURL du serveur : {origin}/mcp\nNom : {displayName}\n\nPuis demandez : « Dépiste {displayName} pour 407 Arlington Ave » ou utilisez canopy_screen avec toute adresse torontoise du pilote du quartier 12.",
+      "Ajoutez ce serveur MCP dans ChatGPT (mode Développeur > Outils > Ajouter un serveur MCP) :\n\nURL du serveur : {origin}/mcp\nNom : {displayName}\n\nPuis demandez : « Dépiste {displayName} pour 1843 Eglinton Ave W » ou utilisez canopy_screen avec toute adresse torontoise du pilote du quartier 12.",
     pClaude:
-      "Connectez ce serveur MCP dans Claude (Paramètres > Intégrations > Ajouter) :\n\nURL du serveur : {origin}/mcp\nNom : {displayName}\n\nPuis demandez-lui de dépister une adresse du quartier 12 avec canopy_screen, p. ex. 407 Arlington Ave.",
+      "Connectez ce serveur MCP dans Claude (Paramètres > Intégrations > Ajouter) :\n\nURL du serveur : {origin}/mcp\nNom : {displayName}\n\nPuis demandez-lui de dépister une adresse du quartier 12 avec canopy_screen, p. ex. 1843 Eglinton Ave W.",
     pClaudeCode:
-      "Claude Code se connecte à ce serveur MCP en une commande :\n\nclaude mcp add --transport http {slug} {origin}/mcp\n\nPuis : « Utilise canopy_screen pour dépister 407 Arlington Ave » ou parcel_crowns avec un identifiant de parcelle comme TOP-W12-0103.",
+      "Claude Code se connecte à ce serveur MCP en une commande :\n\nclaude mcp add --transport http {slug} {origin}/mcp\n\nPuis : « Utilise canopy_screen pour dépister 1843 Eglinton Ave W » ou parcel_crowns avec un identifiant de parcelle comme TOP-5293472.",
     pCli:
-      "Tout client JSON-RPC 2.0 sur HTTP diffusable fonctionne :\n\ncurl -s -X POST {origin}/mcp \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"canopy_screen\",\"arguments\":{\"address\":\"407 Arlington Ave\"}}}'",
+      "Tout client JSON-RPC 2.0 sur HTTP diffusable fonctionne :\n\ncurl -s -X POST {origin}/mcp \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"canopy_screen\",\"arguments\":{\"address\":\"1843 Eglinton Ave W\"}}}'",
   },
 
   footer: {
     wordmark: "Open Nshipyard",
     tagline: "Outils de données civiques, open source, construits à Toronto.",
-    dataNote: "Dépistage à partir des données ouvertes de la Ville de Toronto : points d'adresse, images de 2022 orthorectifiées, inventaire des arbres de rue. Ni conseil juridique ni conseil arboricole.",
+    dataNote: "Dépistage à partir de données ouvertes : LiDAR aéroporté de 2023 via la mosaïque HRDEM de RNCan, points d'adresse et inventaire des arbres de rue de la Ville de Toronto. Ni conseil juridique ni conseil arboricole.",
   },
 };
 

@@ -1,114 +1,69 @@
-// Toronto Tree Canopy core: parcel data loading, point-in-polygon lookup,
-// and the /api/v1/screen payload builder.
+// Toronto Tree Canopy core: parcel canopy data loading, point-in-polygon
+// lookup, and the /api/v1/screen payload builder.
 //
-// Data source: data/parcels-ward12.geojson when the pipeline has delivered
-// it, else data/sample-parcels.geojson (synthetic, clearly marked).
+// Track B (round 2): the screen serves MEASURED 2023 LiDAR canopy structure
+// (1 m CHM from the NRCan HRDEM mosaic, TRCA GTA_2023) plus a mature-tree
+// probability calibrated on the street-tree inventory. There is no crown
+// detection in this track (round 1 detection arms failed: F1 0.023 / 0.000),
+// so `crowns` is always an empty array, kept in the contract for a future
+// segmentation win to fill without breaking clients.
 
-import { readFileSync, existsSync } from "fs";
+import { readFileSync } from "fs";
 import { join } from "path";
 import { STRINGS, Lang } from "./i18n";
 import { geocodeAddress } from "./ckan";
 
-export interface Crown {
-  polygon: [number, number][]; // [[lon, lat], ...] ring
-  crown_diameter_m: number;
-  dbh_est_cm: number;
-  dbh_pi95: [number, number];
-  p_ge_30cm: number;
-  p_gt_61cm: number;
-}
-
-export interface Neighbour6m {
-  crown_count: number;
+export interface ZoneMetrics {
+  tall_canopy_m2_ge6: number;
+  tall_canopy_m2_ge8: number;
+  max_chm_m: number | null;
+  canopy_pct_6: number;
+  canopy_pct_8: number | null;
   p_any_ge_30cm: number;
   p_any_distinctive: number;
+  peak_count: number;
 }
 
-export interface Parcel {
+export interface ParcelCanopy {
   parcel_id: string;
   address: string;
-  geometry: [number, number][]; // parcel ring, [lon, lat]
-  crowns: Crown[];
-  crown_count: number;
-  canopy_pct: number;
-  p_any_ge_30cm: number;
-  p_any_distinctive: number;
-  neighbour_6m: Neighbour6m;
+  area_m2: number;
+  centroid_4326: [number, number];
+  bbox_4326: [number, number, number, number];
+  ring_4326: [number, number][];
+  lot: ZoneMetrics;
+  buffer_6m: ZoneMetrics;
   imagery_vintage: string;
 }
 
-interface RawCrown {
-  polygon: [number, number][];
-  crown_diameter_m: number;
-  dbh_est_cm: number;
-  dbh_pi95_lo: number;
-  dbh_pi95_hi: number;
-  p_ge_30cm: number;
-  p_gt_61cm: number;
+export interface CalibrationDoc {
+  vintage: string;
+  generic_ge_30: { train_auc: number; cv_auc_mean: number; cv_auc_sd: number };
+  generic_gt_61: { train_auc: number; cv_auc_mean: number; cv_auc_sd: number };
+  n_trees: number;
 }
 
-interface RawProps {
-  parcel_id: string;
-  address: string;
-  crowns: RawCrown[];
-  crown_count: number;
-  canopy_pct: number;
-  p_any_ge_30cm: number;
-  p_any_distinctive: number;
-  neighbour_6m: Neighbour6m;
-  imagery_vintage: string;
-}
+let canopyCache: Record<string, ParcelCanopy> | null = null;
+let calCache: CalibrationDoc | null = null;
 
-interface FeatureCollection {
-  features: {
-    geometry: { type: string; coordinates: unknown };
-    properties: RawProps;
-  }[];
-}
-
-function extractRing(geometry: { type: string; coordinates: unknown }): [number, number][] | null {
-  const c = geometry.coordinates;
-  if (geometry.type === "Polygon" && Array.isArray(c)) {
-    return (c as unknown[][])[0] as [number, number][];
+export function loadCanopy(): Record<string, ParcelCanopy> {
+  if (!canopyCache) {
+    const raw = readFileSync(
+      join(process.cwd(), "data", "parcel_canopy_ward12.json"),
+      "utf-8",
+    );
+    canopyCache = JSON.parse(raw) as Record<string, ParcelCanopy>;
   }
-  if (geometry.type === "MultiPolygon" && Array.isArray(c)) {
-    return ((c as unknown[][][])[0] as unknown[][])[0] as [number, number][];
-  }
-  return null;
+  return canopyCache;
 }
 
-function loadParcels(): { parcels: Parcel[]; sample: boolean } {
-  const dir = join(process.cwd(), "data");
-  const pilot = join(dir, "parcels-ward12.geojson");
-  const sample = join(dir, "sample-parcels.geojson");
-  const path = existsSync(pilot) ? pilot : sample;
-  const doc = JSON.parse(readFileSync(path, "utf-8")) as FeatureCollection;
-  const parcels: Parcel[] = [];
-  for (const f of doc.features ?? []) {
-    const ring = extractRing(f.geometry);
-    if (!ring || !f.properties) continue;
-    const p = f.properties;
-    parcels.push({
-      parcel_id: p.parcel_id,
-      address: p.address,
-      geometry: ring,
-      crowns: (p.crowns ?? []).map((c) => ({
-        polygon: c.polygon,
-        crown_diameter_m: c.crown_diameter_m,
-        dbh_est_cm: c.dbh_est_cm,
-        dbh_pi95: [c.dbh_pi95_lo, c.dbh_pi95_hi] as [number, number],
-        p_ge_30cm: c.p_ge_30cm,
-        p_gt_61cm: c.p_gt_61cm,
-      })),
-      crown_count: p.crown_count,
-      canopy_pct: p.canopy_pct,
-      p_any_ge_30cm: p.p_any_ge_30cm,
-      p_any_distinctive: p.p_any_distinctive,
-      neighbour_6m: p.neighbour_6m,
-      imagery_vintage: p.imagery_vintage,
-    });
+export function loadCalibration(): CalibrationDoc {
+  if (!calCache) {
+    calCache = JSON.parse(
+      readFileSync(join(process.cwd(), "data", "calibration_lidar.json"), "utf-8"),
+    ) as CalibrationDoc;
   }
-  return { parcels, sample: path === sample };
+  return calCache;
 }
 
 // Ray-casting point-in-polygon on the parcel ring.
@@ -124,38 +79,51 @@ export function pointInParcel(lon: number, lat: number, ring: [number, number][]
   return inside;
 }
 
-export interface AccuracyDoc {
-  detection_f1: number;
-  calibration_r2_broadleaf: number;
-  calibration_r2_conifer: number;
-  imagery_vintage: string;
-  sample: boolean;
+export function findParcel(lon: number, lat: number): ParcelCanopy | null {
+  const all = loadCanopy();
+  for (const id of Object.keys(all)) {
+    const p = all[id];
+    const b = p.bbox_4326;
+    if (lon < b[0] || lon > b[2] || lat < b[1] || lat > b[3]) continue;
+    if (pointInParcel(lon, lat, p.ring_4326)) return p;
+  }
+  return null;
 }
 
-export function loadAccuracy(): AccuracyDoc {
-  const doc = JSON.parse(
-    readFileSync(join(process.cwd(), "data", "accuracy.json"), "utf-8"),
-  ) as AccuracyDoc;
-  return doc;
+export function parcelById(parcelId: string): ParcelCanopy | null {
+  return loadCanopy()[parcelId] ?? null;
 }
 
 export interface ScreenPayload {
   address: string;
   parcel_id: string;
-  parcel_polygon: [number, number][]; // parcel ring for the map (additive to the API schema)
+  parcel_polygon: [number, number][]; // parcel ring for the map
   imagery_vintage: string;
-  sample: boolean;
+  sample: false;
   lot: {
-    crown_count: number;
-    canopy_pct: number;
+    tall_canopy_m2_ge6: number;
+    tall_canopy_m2_ge8: number;
+    max_chm_m: number | null;
+    canopy_pct: number; // tall canopy (>= 8 m) as % of parcel area
     p_any_ge_30cm: number;
     p_any_distinctive: number;
-    crowns: Crown[];
+    crowns: never[]; // reserved: a future segmentation win fills this
   };
-  neighbour_6m: Neighbour6m;
+  neighbour_6m: {
+    tall_canopy_m2_ge6: number;
+    tall_canopy_m2_ge8: number;
+    max_chm_m: number | null;
+    p_any_ge_30cm: number;
+    p_any_distinctive: number;
+  };
   verdict: string;
-  fee_line: string | null;
-  method: { detection_f1: number; sample: boolean; note: string };
+  method: {
+    vintage: string;
+    calibration_auc: number;
+    calibration_n: number;
+    sample: false;
+    note: string;
+  };
   pilot_scope: string;
 }
 
@@ -165,45 +133,65 @@ function pct(p: number): string {
   return `${Math.round(p * 100)}%`;
 }
 
-export function buildScreenPayload(parcel: Parcel, address: string, lang: Lang, sample: boolean): ScreenPayload {
+function m2(v: number): string {
+  return v >= 100 ? `${Math.round(v)}` : `${v.toFixed(1)}`;
+}
+
+export function buildScreenPayload(
+  parcel: ParcelCanopy,
+  address: string,
+  lang: Lang,
+): ScreenPayload {
   const t = STRINGS[lang];
   const v = t.verdict;
-  const nb = parcel.neighbour_6m.crown_count;
+  const lot = parcel.lot;
+  const buf = parcel.buffer_6m;
+  const cal = loadCalibration();
   const verdict =
-    parcel.crown_count === 0
-      ? v.noCrowns(nb)
-      : v.withCrowns(
-          parcel.crown_count,
-          `${parcel.canopy_pct}%`,
-          pct(parcel.p_any_ge_30cm),
-          pct(parcel.p_any_distinctive),
-          nb,
+    lot.tall_canopy_m2_ge8 < 0.5
+      ? v.noTallCanopy(
+          pct(lot.p_any_ge_30cm),
+          m2(buf.tall_canopy_m2_ge8),
+          pct(buf.p_any_ge_30cm),
+        )
+      : v.withCanopy(
+          m2(lot.tall_canopy_m2_ge8),
+          `${lot.canopy_pct_8 ?? 0}`,
+          lot.max_chm_m === null ? "–" : `${lot.max_chm_m}`,
+          pct(lot.p_any_ge_30cm),
+          pct(lot.p_any_distinctive),
+          m2(buf.tall_canopy_m2_ge8),
+          pct(buf.p_any_ge_30cm),
+          lot.peak_count,
         );
-  const likelyMature = parcel.crowns.filter((c) => c.p_ge_30cm >= 0.5).length;
-  const fee_line =
-    likelyMature > 0
-      ? t.screen.feeLine(likelyMature, `$${(likelyMature * 436.39).toFixed(2)}`)
-      : null;
-  const acc = loadAccuracy();
   return {
     address,
     parcel_id: parcel.parcel_id,
-    parcel_polygon: parcel.geometry,
+    parcel_polygon: parcel.ring_4326,
     imagery_vintage: parcel.imagery_vintage,
-    sample,
+    sample: false,
     lot: {
-      crown_count: parcel.crown_count,
-      canopy_pct: parcel.canopy_pct,
-      p_any_ge_30cm: parcel.p_any_ge_30cm,
-      p_any_distinctive: parcel.p_any_distinctive,
-      crowns: parcel.crowns,
+      tall_canopy_m2_ge6: lot.tall_canopy_m2_ge6,
+      tall_canopy_m2_ge8: lot.tall_canopy_m2_ge8,
+      max_chm_m: lot.max_chm_m,
+      canopy_pct: lot.canopy_pct_8 ?? 0,
+      p_any_ge_30cm: lot.p_any_ge_30cm,
+      p_any_distinctive: lot.p_any_distinctive,
+      crowns: [],
     },
-    neighbour_6m: parcel.neighbour_6m,
+    neighbour_6m: {
+      tall_canopy_m2_ge6: buf.tall_canopy_m2_ge6,
+      tall_canopy_m2_ge8: buf.tall_canopy_m2_ge8,
+      max_chm_m: buf.max_chm_m,
+      p_any_ge_30cm: buf.p_any_ge_30cm,
+      p_any_distinctive: buf.p_any_distinctive,
+    },
     verdict,
-    fee_line,
     method: {
-      detection_f1: acc.detection_f1,
-      sample: acc.sample,
+      vintage: cal.vintage,
+      calibration_auc: cal.generic_ge_30.cv_auc_mean,
+      calibration_n: cal.n_trees,
+      sample: false,
       note: t.screen.honesty,
     },
     pilot_scope: PILOT_SCOPE,
@@ -215,7 +203,11 @@ export class ScreenError extends Error {
     public status: number,
     public body: unknown,
   ) {
-    super(typeof body === "object" && body !== null && "error" in body ? String((body as { error: unknown }).error) : "screen error");
+    super(
+      typeof body === "object" && body !== null && "error" in body
+        ? String((body as { error: unknown }).error)
+        : "screen error",
+    );
   }
 }
 
@@ -223,20 +215,18 @@ export class ScreenError extends Error {
 export async function screenAddress(raw: string, lang: Lang): Promise<ScreenPayload> {
   const t = STRINGS[lang];
   const geo = await geocodeAddress(raw).catch((e: Error) => {
-    if (e.message === "CKAN_UNAVAILABLE") throw new ScreenError(503, { error: t.screen.lookupError });
+    if (e.message === "CKAN_UNAVAILABLE")
+      throw new ScreenError(503, { error: t.screen.lookupError });
     throw e;
   });
-  if (!geo) throw new ScreenError(404, { error: t.screen.notFound, pilot_scope: PILOT_SCOPE });
-  const { parcels, sample } = loadParcels();
-  const parcel = parcels.find((p) => pointInParcel(geo.lon, geo.lat, p.geometry));
+  if (!geo)
+    throw new ScreenError(404, { error: t.screen.notFound, pilot_scope: PILOT_SCOPE });
+  const parcel = findParcel(geo.lon, geo.lat);
   if (!parcel) {
-    throw new ScreenError(404, { error: "pilot covers Ward 12 (Davenport) only", pilot_scope: PILOT_SCOPE });
+    throw new ScreenError(404, {
+      error: "pilot covers Ward 12 (Davenport) only",
+      pilot_scope: PILOT_SCOPE,
+    });
   }
-  return buildScreenPayload(parcel, geo.address, lang, sample);
-}
-
-export function parcelById(parcelId: string): { parcel: Parcel; sample: boolean } | null {
-  const { parcels, sample } = loadParcels();
-  const parcel = parcels.find((p) => p.parcel_id === parcelId);
-  return parcel ? { parcel, sample } : null;
+  return buildScreenPayload(parcel, geo.address, lang);
 }

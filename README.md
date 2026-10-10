@@ -1,57 +1,54 @@
 # Toronto Tree Canopy
 
-A per-parcel tree screening tool for Toronto builders, architects, and investors: type an address and see how many tree crowns the detector found on the lot, the probability any clears the Private Tree By-law permit thresholds, canopy percent, and what to do next. An Open Nshipyard project.
+A per-parcel tree screening tool for Toronto builders, architects, and investors: type an address and see the lot's tall-canopy structure measured from 2023 LiDAR, the calibrated chance a mature tree stands on the lot, and what to do next. An Open Nshipyard project. Ward 12 (Davenport) pilot: 27,104 parcels.
 
-**Screening signal only; not a permit determination.** This tool never says "permit required." It says "3 likely-mature crowns on this lot, get an arborist before planning around them."
+**Screening signal only; not a permit determination.** This tool never says "permit required." It says "2023 LiDAR measured 50 m² of surface 8 m or taller on this lot; the calibrated chance a mature tree stands on it is 27%; get an arborist before planning around it."
 
 ## The problem it solves
 
-A builder evaluating a Toronto lot cannot answer "will trees block my build" from open data. The Private Tree By-law (Municipal Code Chapter 813, Article III) requires a City permit before injuring or removing any private tree 30 cm or more in trunk diameter (DBH, measured at 1.4 m); September 2026 amendments added a Distinctive tier above 61 cm with stronger protections. Construction-related removal permits cost $436.39 per tree (2026 fee schedule), and the application site plan must show ALL trees 30 cm and up on the property AND on adjacent properties within 6 m of the boundary. Private trees are invisible in open data: no inventory exists (the City's 688,335 street-tree records cover city-owned road-allowance trees only, the wrong trees for this question). This project detects crowns from aerial imagery and converts them into per-lot permit-threshold probabilities.
+A builder evaluating a Toronto lot cannot answer "will trees block my build" from open data. The Private Tree By-law (Municipal Code Chapter 813, Article III) requires a City permit before injuring or removing any private tree 30 cm or more in trunk diameter (DBH, measured at 1.4 m); September 2026 amendments added a Distinctive tier above 61 cm with stronger protections. Construction-related removal permits cost $436.39 per tree (2026 fee schedule), and the application site plan must show ALL trees 30 cm and up on the property AND on adjacent properties within 6 m of the boundary. Private trees are invisible in open data: no inventory exists (the City's street-tree records cover city-owned road-allowance trees only, the wrong trees for this question). This project measures canopy structure from 2023 airborne LiDAR and converts it into per-lot permit-threshold probabilities.
 
 ## Methodology
 
-1. **Detect crowns.** A DeepForest detection model (RetinaNet with pre-trained weights, MIT licence) draws crown polygons on the City of Toronto's orthorectified aerial imagery. Instance delineation is the hard part, so per-tree counts carry a stated error bar.
-2. **Estimate trunk diameter.** Crown diameter is converted to trunk diameter (DBH) with allometry fit on Toronto's 688,335 street-tree records, species by species, urban trees only. The model never guesses species from RGB colour; every estimate reports a 95% prediction interval.
-3. **Score against the by-law.** Each crown gets the probability its trunk clears the 30 cm permit threshold and the 61 cm Distinctive tier. Crowns are rolled up per parcel AND over a 6 m neighbour buffer, matching the by-law's site-plan rule.
+1. **Measure canopy structure.** The NRCan HRDEM mosaic (CanElevation series, open data) serves 2023 airborne LiDAR flown for the Toronto and Region Conservation Authority at 1 m. Surface minus terrain gives a canopy height model (CHM). Per parcel the screen reports tall-canopy area at 6 m and 8 m, max height, and canopy percent, for the lot and for the 6 m neighbour band the by-law's site-plan rule cares about. Tall-canopy pixels include buildings: the numbers measure elevated surface, not trees alone.
+2. **Calibrate mature-tree probability.** A logistic regression maps LiDAR height (max CHM in ~3 m window) and canopy area (CHM 6 m and up inside 5 m radius) around 13,208 Ward 12 street trees to P(trunk 30 cm or more), plus P(trunk over 61 cm) for the Distinctive tier. Street trees are managed road-allowance trees, so the transfer to private trees is approximate. One apex peak per contiguous tall structure is scored (a flat roof is one peak, a tree crown is one peak); peaks smoother than 95% of measured street-tree crowns are treated as roofs and excluded.
+3. **Score against the by-law.** Peaks on the lot are rolled up to the chance at least one mature tree stands on the lot, and the same for the 6 m neighbour band. The `crowns` array in the API is reserved for a future segmentation win and currently empty.
 
 ## Accuracy
 
-The pilot measures its own accuracy; the table below carries the measured numbers once the pipeline reports them.
-
 | Metric | Measured | How measured |
 |---|---|---|
-| Detection F1 (pre-trained DeepForest, leaf-off 2022 ortho) | **0.023** at IoU 0.5 | 182 hand-labeled crowns, 3 QA tiles, Ward 12 |
-| Detection F1 (fine-tuned on 118 Toronto crowns, production 0.40 m GSD) | **0.000** on held-out tile | 64 crowns, qa7 tile; the weak 8 cm signal (F1 0.233) collapses at production resolution |
-| Calibration R2 | **Not completable** | Pairing detections to street trees would fit noise at F1 ~0; no R2 is reported |
+| Mature-tree calibration P(DBH ≥ 30 cm) | **AUC 0.763** (5-fold CV 0.763 ± 0.009) | 13,208 Ward 12 street trees with known trunk diameters, geometric selection inside the ward polygon |
+| Distinctive-tree calibration P(DBH > 61 cm) | **AUC 0.805** (5-fold CV 0.805 ± 0.009) | Same trees, 7.2% positive |
+| Per-genus P(DBH ≥ 30 cm), n ≥ 500 | Acer 0.776, Gleditsia 0.802, Picea 0.757, Quercus 0.764, Tilia 0.807, Ulmus 0.707; Prunus 0.597 | Same fit, reported not shipped (genus unknown at inference) |
+| Binned calibration | Monotonic; e.g. predicted 0.40 → observed 0.46, predicted 0.66 → observed 0.69 | Deciles on the fit set |
+| Individual crown detection (round 1) | **Failed honestly, not shipped**: pre-trained DeepForest F1 0.023, fine-tuned F1 0.000, 1 m watershed F1 0.046 | 182 hand-labeled crowns, 3 QA tiles; all five City orthophoto vintages are leaf-off spring captures |
 
-**Pilot verdict (2026-10-10):** the detection track did not ship. All five City orthophoto vintages checked (2015, 2018, 2020, 2021, 2022) are leaf-off spring captures, and RGB crown detection trained on leaf-on data fails on them (F1 0.023 pre-trained, 0.000 fine-tuned at production resolution). The recommended next step is a pivot to the 2018 leaf-on canopy raster for per-parcel canopy percent, which sidesteps detection entirely. Full reasoning in `data/METHOD_NOTES.md`.
+Full reasoning in `data/METHOD_NOTES.md`. The screen sidesteps detection entirely: it measures canopy structure, not crowns.
 
-Until the pipeline delivers measured numbers, the app and UI carry sample placeholders, always marked `"sample": true` in `data/accuracy.json` and with an on-page sample banner. Do not treat placeholder values as measured.
+## LiDAR vintage
 
-Reference values from the literature (not this pilot): Beloiu et al. 2023 reported F1 ~0.76 at 10 cm for crown detection on aerial imagery; Martin et al. 2012 reported R2 0.91-0.96 for species-specific urban crown-to-DBH allometry on oaks.
-
-## Imagery vintage
-
-**2022.** Every record is stamped with its imagery vintage. A tree cut in 2024 is a false positive; new growth since 2022 is missing. The imagery-currency caveat appears on every screening result.
+**2023** (TRCA GTA_2023 airborne LiDAR via the NRCan HRDEM mosaic). Every record is stamped `2023 LiDAR`. A tree cut in 2024 is a false positive; new growth since 2023 is missing. The vintage caveat appears on every screening result.
 
 ## Limitations
 
-- The pilot covers **Ward 12 (Davenport)** only. Addresses outside the pilot parcels get HTTP 404 with the pilot scope.
+- The pilot covers **Ward 12 (Davenport)** only: 27,104 parcels. Addresses outside get HTTP 404 with the pilot scope.
 - Screening signal only; never a permit determination. Only a certified arborist can confirm trunk diameter on site.
-- The detector cannot see trees removed after the 2022 imagery, and cannot see under-canopy trees.
-- Trunk diameter estimates are probabilistic with stated 95% prediction intervals; they are not measurements.
+- Tall-canopy area counts elevated surface 6 m and up, **including buildings**. The mature-tree probability is calibrated on street trees and applied to tree-like LiDAR peaks; pitched roofs still read as canopy and inflate it.
+- The calibration is fit on managed road-allowance street trees; transfer to private backyard trees is approximate.
+- The screen cannot see trees removed after the 2023 LiDAR, and cannot see under-canopy trees.
 
 ## App
 
 Next.js 16 + React 19, TypeScript strict, EN/FR (`/en`, `/fr`), red/paper civic theme.
 
-- **Explorer** (`/`): address search with typeahead (`/api/suggest`, backed by the City's Address Points), an SVG crown map (parcel + crowns + 6 m buffer, no external tile services), and a per-parcel screening card with a plain-English verdict.
-- **REST**: `GET /api/v1/screen?address=…` (per-parcel screening payload), `GET /api/suggest?q=…` (typeahead), `GET /api/download?format=geojson|csv` (pilot dataset), `GET /api/openapi.json` (OpenAPI 3.1).
+- **Explorer** (`/`): address search with typeahead (`/api/suggest`, backed by the City's Address Points), a per-parcel tall-canopy map (2022 ortho with 2023 LiDAR canopy tint, pre-rendered PNGs), and a screening card with a plain-English verdict.
+- **REST**: `GET /api/v1/screen?address=…` (per-parcel screening payload), `GET /api/suggest?q=…` (typeahead), `GET /api/download?format=geojson|csv` (Ward 12 dataset, built on the fly), `GET /api/openapi.json` (OpenAPI 3.1).
 - **MCP**: `POST /mcp` (Streamable HTTP JSON-RPC 2.0) with tools `canopy_screen(address)` and `parcel_crowns(parcel_id)`.
 
 ### Screenshots
 
-![Explorer with a screened lot, crown map, and verdict](public/screenshots/explorer-en.png)
+![Explorer with a screened lot, tall-canopy map, and verdict](public/screenshots/explorer-en.png)
 ![Screening card detail](public/screenshots/card-en.png)
 ![Explorer in French](public/screenshots/explorer-fr.png)
 
@@ -64,11 +61,19 @@ npx tsc --noEmit   # type check
 npm run build      # production build
 ```
 
-The app reads `data/parcels-ward12.geojson` when the pilot pipeline has delivered it, and falls back to `data/sample-parcels.geojson` (synthetic, clearly marked) otherwise. `data/accuracy.json` is owned by the pilot pipeline agent; the current file carries sample placeholders.
+The app reads `data/parcel_canopy_ward12.json` (per-parcel LiDAR metrics for all 27,104 Ward 12 parcels) and `data/calibration_lidar.json` (the fitted calibration). Reproduce both with the repo venv:
+
+```bash
+.venv/bin/python3 data/lidar/fetch_ward12_full.py  # 40 WCS chunks, NRCan HRDEM
+.venv/bin/python3 data/lidar/build_chm_full.py     # mosaic -> ward12_chm_full.tif
+.venv/bin/python3 data/lidar/calibrate_lidar.py    # -> data/calibration_lidar.json
+.venv/bin/python3 data/lidar/parcel_canopy.py      # -> data/parcel_canopy_ward12.json
+.venv/bin/python3 scripts/render_parcel_maps.py --only TOP-5293472  # demo map
+```
 
 ## Licence
 
-MIT. Data carries the City of Toronto open data terms.
+MIT. Data carries the City of Toronto and NRCan open data terms.
 
 ## Author
 

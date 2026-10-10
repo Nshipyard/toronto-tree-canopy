@@ -1,0 +1,54 @@
+{
+ "files": [
+  {
+   "file": "qa1_tile.copc.laz",
+   "n_points": 27148876,
+   "area_m2_percentile": 980634.7,
+   "density_pts_per_m2": 27.69,
+   "bbox_utm17": [
+    625000.0,
+    4837000.0,
+    625999.99,
+    4837999.99
+   ],
+   "class_histogram": {
+    "1 (unassigned)": 8805919,
+    "2 (ground)": 9072805,
+    "6 (building)": 9262943,
+    "7 (low point)": 6626,
+    "18 (high noise)": 583
+   },
+   "fraction_single_return": 0.6606,
+   "z_range": [
+    130.47,
+    178.39
+   ],
+   "point_format": 6
+  },
+  {
+   "file": "qa37_tile.copc.laz",
+   "n_points": 33422936,
+   "area_m2_percentile": 977654.7,
+   "density_pts_per_m2": 34.19,
+   "bbox_utm17": [
+    627000.0,
+    4837000.0,
+    627999.99,
+    4837999.99
+   ],
+   "class_histogram": {
+    "1 (unassigned)": 16123009,
+    "2 (ground)": 10153265,
+    "6 (building)": 7135686,
+    "7 (low point)": 10418,
+    "18 (high noise)": 558
+   },
+   "fraction_single_return": 0.4288,
+   "z_range": [
+    114.27,
+    241.98
+   ],
+   "point_format": 6
+  }
+ ]
+}

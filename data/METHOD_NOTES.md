@@ -354,3 +354,33 @@ statistically calibrated mature-tree probability. No crown detection anywhere.
   at the cost of a 5-year vintage mismatch; not attempted.
 - A building-footprint mask (City open data) would remove the pitched-roof
   inflation the roughness gate cannot catch.
+
+## Track A (round 2): label invalidity + strong-method result (2026-10-10)
+
+CRITICAL CORRECTION: the round-1 evaluation labels `data/labels/qa{1,3,7}.json`
+("182 hand-labeled crowns") are NOT crowns. They are the cells of the 8x8
+labeling grid exported by `pipeline/00_qa_tiles.py` as a labeling reference:
+every label center sits within ~1 m of a 10 m grid-cell center, and overlays
+show boxes on rooftops, roads, cars, and empty yards in a rigid grid
+(`data/lidar/tracka/diag_qa1_labels.png`). The labeling agent labeled the grid
+cells instead of crowns. CONSEQUENCE: every round-1 detection F1 is VOID:
+0.023 (RGB pre-trained), 0.000 (RGB fine-tuned), 0.046 (1 m CHM watershed)
+were all computed against a non-tree grid. The "detection is dead" conclusion
+and all arm rankings from round 1 are retracted.
+
+Track A built corrected labels (CHM local-maxima candidates verified one-by-one
+against the 8 cm ortho; `data/labels_corrected/qa{1,3,7}.json`: 27+24+109 real
+trees) and ran the strong method: raw TRCA GTA_2023 point cloud (NRCan
+CanElevation S3, 27.69 pts/m2 measured, far above the 8 pts/m2 bar), 0.5-unit
+fine CHM, City of Toronto building-footprint mask (557,694 outlines, 2 m
+buffer), Dalponte-style seeded region growing with max_radius cap.
+Measured on corrected labels (greedy F1 @ IoU 0.5): tuned qa1+qa3 F1 = 0.611;
+held-out qa7 F1 = 0.074 (overall 0.264). The qa7 failure is an understood
+domain shift: qa7 is dense mature forest (20-27 m trees, 8-12 m crowns) while
+qa1/qa3 are urban (4-8 m crowns); the fixed max_radius=2.5 fragments large
+crowns into pieces that cannot reach IoU 0.5. Generalization failure, not
+detection failure; the fix is adaptive crown allometry (taller -> wider),
+not implemented. Verdict: NOT a winner by the 0.1 held-out bar, but the core
+hypothesis is proved on urban trees (0.611 vs 0.000 for the 1 m watershed on
+the same corrected labels). Recommended next: proper relabeling + adaptive
+radius retest. Full report: `data/TRACKA_REPORT.md`.

@@ -1,0 +1,234 @@
+{
+ "arm": "tracka-fine-chm-regiongrow",
+ "params": {
+  "sigma": 0.5,
+  "min_dist": 2.0,
+  "peak_h": 2.0,
+  "floor": 1.0,
+  "max_radius": 2.5,
+  "min_area": 5.0,
+  "res_m": 0.5,
+  "score": "segment max CHM, min-max normalized to [0,1] per tile",
+  "labels": "CORRECTED (real trees, not grid cells)"
+ },
+ "imagery_vintage": "2023",
+ "iou": 0.5,
+ "thresholds": [
+  0.05,
+  0.1,
+  0.15,
+  0.2,
+  0.25,
+  0.3,
+  0.4,
+  0.5
+ ],
+ "tiles": [
+  "qa1",
+  "qa3",
+  "qa7"
+ ],
+ "n_labeled_crowns": 160,
+ "per_tile": {
+  "qa1": {
+   "n_gt": 27,
+   "n_pred": 39
+  },
+  "qa3": {
+   "n_gt": 24,
+   "n_pred": 40
+  },
+  "qa7": {
+   "n_gt": 109,
+   "n_pred": 109
+  }
+ },
+ "threshold_sweep": [
+  {
+   "threshold": 0.05,
+   "tp": 45,
+   "fp": 136,
+   "fn": 115,
+   "precision": 0.249,
+   "recall": 0.281,
+   "f1": 0.264
+  },
+  {
+   "threshold": 0.1,
+   "tp": 44,
+   "fp": 132,
+   "fn": 116,
+   "precision": 0.25,
+   "recall": 0.275,
+   "f1": 0.262
+  },
+  {
+   "threshold": 0.15,
+   "tp": 43,
+   "fp": 128,
+   "fn": 117,
+   "precision": 0.251,
+   "recall": 0.269,
+   "f1": 0.26
+  },
+  {
+   "threshold": 0.2,
+   "tp": 42,
+   "fp": 125,
+   "fn": 118,
+   "precision": 0.251,
+   "recall": 0.263,
+   "f1": 0.257
+  },
+  {
+   "threshold": 0.25,
+   "tp": 41,
+   "fp": 122,
+   "fn": 119,
+   "precision": 0.252,
+   "recall": 0.256,
+   "f1": 0.254
+  },
+  {
+   "threshold": 0.3,
+   "tp": 36,
+   "fp": 118,
+   "fn": 124,
+   "precision": 0.234,
+   "recall": 0.225,
+   "f1": 0.229
+  },
+  {
+   "threshold": 0.4,
+   "tp": 34,
+   "fp": 116,
+   "fn": 126,
+   "precision": 0.227,
+   "recall": 0.212,
+   "f1": 0.219
+  },
+  {
+   "threshold": 0.5,
+   "tp": 28,
+   "fp": 115,
+   "fn": 132,
+   "precision": 0.196,
+   "recall": 0.175,
+   "f1": 0.185
+  }
+ ],
+ "best": {
+  "threshold": 0.05,
+  "tp": 45,
+  "fp": 136,
+  "fn": 115,
+  "precision": 0.249,
+  "recall": 0.281,
+  "f1": 0.264
+ },
+ "qa7_only": {
+  "rows": [
+   {
+    "threshold": 0.05,
+    "tp": 8,
+    "fp": 100,
+    "fn": 101,
+    "precision": 0.074,
+    "recall": 0.073,
+    "f1": 0.074
+   },
+   {
+    "threshold": 0.1,
+    "tp": 8,
+    "fp": 99,
+    "fn": 101,
+    "precision": 0.075,
+    "recall": 0.073,
+    "f1": 0.074
+   },
+   {
+    "threshold": 0.15,
+    "tp": 8,
+    "fp": 99,
+    "fn": 101,
+    "precision": 0.075,
+    "recall": 0.073,
+    "f1": 0.074
+   },
+   {
+    "threshold": 0.2,
+    "tp": 8,
+    "fp": 99,
+    "fn": 101,
+    "precision": 0.075,
+    "recall": 0.073,
+    "f1": 0.074
+   },
+   {
+    "threshold": 0.25,
+    "tp": 7,
+    "fp": 99,
+    "fn": 102,
+    "precision": 0.066,
+    "recall": 0.064,
+    "f1": 0.065
+   },
+   {
+    "threshold": 0.3,
+    "tp": 7,
+    "fp": 99,
+    "fn": 102,
+    "precision": 0.066,
+    "recall": 0.064,
+    "f1": 0.065
+   },
+   {
+    "threshold": 0.4,
+    "tp": 7,
+    "fp": 99,
+    "fn": 102,
+    "precision": 0.066,
+    "recall": 0.064,
+    "f1": 0.065
+   },
+   {
+    "threshold": 0.5,
+    "tp": 5,
+    "fp": 98,
+    "fn": 104,
+    "precision": 0.049,
+    "recall": 0.046,
+    "f1": 0.047
+   }
+  ],
+  "best": {
+   "threshold": 0.05,
+   "tp": 8,
+   "fp": 100,
+   "fn": 101,
+   "precision": 0.074,
+   "recall": 0.073,
+   "f1": 0.074
+  },
+  "n_gt": 109,
+  "n_pred": 109
+ },
+ "note": "Greedy matching F1 at IoU 0.5, identical harness for all arms. Labels are hand-labeled center+diameter eyeball estimates on leaf-off 2022 8cm ortho; not survey-grade.",
+ "method": {
+  "data_source": "NRCan CanElevation LiDAR Point Clouds S3 (https://canelevation-lidar-point-clouds.s3.ca-central-1.amazonaws.com), supplier TRCA, project GTA_2023, 20230511 capture, Open Government Licence - Canada",
+  "point_density": "measured 27.69 pts/m2 on E6250_N48370 tile (27,148,876 pts / 980,635 m2)",
+  "classification": "vendor-classified: ground(2), building(6), unassigned(1), low point(7), high noise(18); NO vegetation classes -> buildings dropped from DSM, vegetation arrives via unassigned class 1",
+  "building_mask": "City of Toronto 'Topographic Mapping - Building Outlines' (CKAN 09a930cc..., 557,694 outlines, DERIVED_HEIGHT from LiDAR), rasterized at 0.5 m with 2 m buffer; masked to nan in CHM BEFORE segmentation. Double defense: class-6 points also excluded from DSM.",
+  "dtm": "NRCan HRDEM 1 m DTM (WCS, validated flat-ground median 0.06 m), bilinear resample to 0.5 m",
+  "dsm": "fine max-Z scatter of class-1/vegetation points at 0.5 m (~6.9 pts/cell)",
+  "chm": "DSM - DTM, clipped [-2, 60] m, EPSG:26917",
+  "segmentation": "classical Dalponte-style seeded region growing: Gaussian smooth -> local-maxima treetops (tallest first) -> grow to 8-neighbors only downhill, above floor, within max_radius, unclaimed. Stops at valleys between crowns; this fixes the marker-watershed failure mode (segments leaking across shallow valleys into grove-sized blobs).",
+  "labels": "CORRECTED labels (data/labels_corrected/): the shared data/labels are 8x8 grid cells, not crowns (proven in TRACKA_REPORT.md); corrected labels are real trees verified against the 8 cm ortho. qa7 HELD OUT of tuning.",
+  "box_construction": "axis-aligned bbox of surviving watershed segment, meters from tile top-left"
+ },
+ "baselines_for_comparison": {
+  "rgb_pretrained_at_production_gsd": 0.023,
+  "chm_watershed_1m": 0.046,
+  "note": "Identical harness (IoU 0.5, greedy matching, threshold sweep). qa7 HELD OUT of tuning."
+ }
+}

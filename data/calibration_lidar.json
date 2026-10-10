@@ -1,0 +1,215 @@
+{
+ "vintage": "2023 LiDAR (NRCan HRDEM mosaic, TRCA GTA_2023)",
+ "features": {
+  "h": "max CHM (m) in ~3 m window at the tree location",
+  "area": "tall-canopy area (m^2), CHM >= 6 m inside 5 m radius"
+ },
+ "scaler": {
+  "mean": [
+   9.7161,
+   48.8832
+  ],
+  "sd": [
+   4.5927,
+   28.3439
+  ]
+ },
+ "n_trees": 13208,
+ "n_no_chm": 4,
+ "roughness_gate_m": 0.46,
+ "roughness_note": "Peaks smoother than p5 of street-tree crown roughness are treated as structures (flat roofs), not trees, and excluded from parcel scoring. At fit trees: p1=0.085 m, p5=0.46 m, median=2.092 m.",
+ "generic_ge_30": {
+  "intercept": -1.0492,
+  "coef_h": 0.708,
+  "coef_area": 0.3999,
+  "train_auc": 0.7631,
+  "cv_auc_mean": 0.763,
+  "cv_auc_sd": 0.0087,
+  "calibration_bins": [
+   {
+    "n": 1321,
+    "pred_mean": 0.0594,
+    "obs_frac": 0.1499
+   },
+   {
+    "n": 1321,
+    "pred_mean": 0.0934,
+    "obs_frac": 0.0886
+   },
+   {
+    "n": 1321,
+    "pred_mean": 0.144,
+    "obs_frac": 0.1249
+   },
+   {
+    "n": 1320,
+    "pred_mean": 0.2032,
+    "obs_frac": 0.1485
+   },
+   {
+    "n": 1321,
+    "pred_mean": 0.2538,
+    "obs_frac": 0.1673
+   },
+   {
+    "n": 1321,
+    "pred_mean": 0.2964,
+    "obs_frac": 0.2036
+   },
+   {
+    "n": 1320,
+    "pred_mean": 0.3419,
+    "obs_frac": 0.2773
+   },
+   {
+    "n": 1321,
+    "pred_mean": 0.4024,
+    "obs_frac": 0.4572
+   },
+   {
+    "n": 1321,
+    "pred_mean": 0.4967,
+    "obs_frac": 0.645
+   },
+   {
+    "n": 1321,
+    "pred_mean": 0.663,
+    "obs_frac": 0.6919
+   }
+  ]
+ },
+ "generic_gt_61": {
+  "intercept": -3.1316,
+  "coef_h": 0.9171,
+  "coef_area": 0.3995,
+  "train_auc": 0.8052,
+  "cv_auc_mean": 0.8052,
+  "cv_auc_sd": 0.0087,
+  "calibration_bins": [
+   {
+    "n": 1321,
+    "pred_mean": 0.0058,
+    "obs_frac": 0.0401
+   },
+   {
+    "n": 1321,
+    "pred_mean": 0.0105,
+    "obs_frac": 0.0129
+   },
+   {
+    "n": 1321,
+    "pred_mean": 0.0184,
+    "obs_frac": 0.0242
+   },
+   {
+    "n": 1320,
+    "pred_mean": 0.0291,
+    "obs_frac": 0.0136
+   },
+   {
+    "n": 1321,
+    "pred_mean": 0.0391,
+    "obs_frac": 0.0363
+   },
+   {
+    "n": 1321,
+    "pred_mean": 0.0493,
+    "obs_frac": 0.0204
+   },
+   {
+    "n": 1320,
+    "pred_mean": 0.0631,
+    "obs_frac": 0.0174
+   },
+   {
+    "n": 1321,
+    "pred_mean": 0.0853,
+    "obs_frac": 0.0341
+   },
+   {
+    "n": 1321,
+    "pred_mean": 0.1323,
+    "obs_frac": 0.131
+   },
+   {
+    "n": 1321,
+    "pred_mean": 0.2837,
+    "obs_frac": 0.3861
+   }
+  ]
+ },
+ "per_genus_ge_30": {
+  "Acer": {
+   "n": 3422,
+   "frac_ge_30": 0.4901,
+   "train_auc": 0.7759,
+   "cv_auc_mean": 0.7752,
+   "cv_auc_sd": 0.0124,
+   "intercept": -0.3438,
+   "coef_h": 0.606,
+   "coef_area": 0.5405
+  },
+  "Gleditsia": {
+   "n": 1042,
+   "frac_ge_30": 0.4088,
+   "train_auc": 0.8022,
+   "cv_auc_mean": 0.8034,
+   "cv_auc_sd": 0.0558,
+   "intercept": -0.7882,
+   "coef_h": 1.2208,
+   "coef_area": 0.1392
+  },
+  "Picea": {
+   "n": 668,
+   "frac_ge_30": 0.3862,
+   "train_auc": 0.7571,
+   "cv_auc_mean": 0.7568,
+   "cv_auc_sd": 0.0037,
+   "intercept": -0.7191,
+   "coef_h": 1.1116,
+   "coef_area": 0.0023
+  },
+  "Prunus": {
+   "n": 612,
+   "frac_ge_30": 0.1356,
+   "train_auc": 0.597,
+   "cv_auc_mean": 0.5858,
+   "cv_auc_sd": 0.0628,
+   "intercept": -1.786,
+   "coef_h": -0.1397,
+   "coef_area": 0.3643
+  },
+  "Quercus": {
+   "n": 809,
+   "frac_ge_30": 0.1273,
+   "train_auc": 0.7642,
+   "cv_auc_mean": 0.763,
+   "cv_auc_sd": 0.0757,
+   "intercept": -1.9833,
+   "coef_h": 0.8413,
+   "coef_area": 0.325
+  },
+  "Tilia": {
+   "n": 672,
+   "frac_ge_30": 0.5685,
+   "train_auc": 0.8074,
+   "cv_auc_mean": 0.8057,
+   "cv_auc_sd": 0.0354,
+   "intercept": -0.06,
+   "coef_h": 1.4686,
+   "coef_area": -0.2579
+  },
+  "Ulmus": {
+   "n": 675,
+   "frac_ge_30": 0.2919,
+   "train_auc": 0.7073,
+   "cv_auc_mean": 0.7052,
+   "cv_auc_sd": 0.0301,
+   "intercept": -1.1529,
+   "coef_h": 0.1629,
+   "coef_area": 0.6255
+  }
+ },
+ "shipped": "generic_ge_30 and generic_gt_61 (genus is unknown at inference time)",
+ "limitations": "Fit on City of Toronto street trees: managed road-allowance trees, pruned and spaced by the City. Transfer to private backyard trees is approximate. The model conditions on tree presence: P(DBH>=30 | h, area) was fit at known tree locations, so applied to a LiDAR peak it answers 'if this peak is a tree, how likely is it mature'. Peaks smoother than p5 of street-tree crown roughness are excluded as structures (flat roofs), but pitched roofs and other rough structures still pass the gate and inflate parcel rollups. Screening signal only; not a permit determination."
+}

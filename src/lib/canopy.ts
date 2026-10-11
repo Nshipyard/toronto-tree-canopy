@@ -64,10 +64,17 @@ export function shardBase(): string {
     return "https://cdn.jsdelivr.net/gh/Nshipyard/toronto-tree-canopy@main/data/shards";
   return join(process.cwd(), "data", "shards");
 }
+// COGs are pinned to the commit that re-encoded them ZSTD -> DEFLATE
+// (the geotiff npm package cannot decode compression 50000). jsDelivr keeps
+// serving stale per-file copies of branch URLs after a push, and its purge
+// endpoint does not reliably clear them, so the COGs use an immutable commit
+// URL instead of the moving @main branch.
+const COGS_PIN = "ee4d3671edda03d604a5e7860b03a7b3305e480b";
 export function cogBase(): string {
   if (process.env.CANOPY_COG_BASE) return process.env.CANOPY_COG_BASE;
   const sb = shardBase();
-  if (sb.startsWith("http")) return sb.replace(/\/shards\/?$/, "/cogs");
+  if (sb.startsWith("http"))
+    return sb.replace(/\/shards\/?$/, "/cogs").replace("@main", `@${COGS_PIN}`);
   return join(process.cwd(), "data", "cogs");
 }
 const SHARD_CACHE_MAX = 32;

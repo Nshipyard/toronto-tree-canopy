@@ -1,6 +1,6 @@
 # Toronto Tree Canopy
 
-A per-parcel tree screening tool for Toronto builders, architects, and investors: type an address and see the lot's tall-canopy structure measured from 2023 LiDAR, the calibrated chance a mature tree stands on the lot, and what to do next. An Open Nshipyard project. Ward 12 (Davenport) pilot: 27,104 parcels.
+A per-parcel tree screening tool for Toronto builders, architects, and investors: type an address and see the lot's tall-canopy structure measured from 2023 LiDAR, the calibrated chance a mature tree stands on the lot, and what to do next. An Open Nshipyard project. Toronto-wide: 498,463 parcels, 25 wards.
 
 **Screening signal only; not a permit determination.** This tool never says "permit required." It says "2023 LiDAR measured 50 m² of surface 8 m or taller on this lot; the calibrated chance a mature tree stands on it is 27%; get an arborist before planning around it."
 
@@ -10,18 +10,17 @@ A builder evaluating a Toronto lot cannot answer "will trees block my build" fro
 
 ## Methodology
 
-1. **Measure canopy structure.** The NRCan HRDEM mosaic (CanElevation series, open data) serves 2023 airborne LiDAR flown for the Toronto and Region Conservation Authority at 1 m. Surface minus terrain gives a canopy height model (CHM). Per parcel the screen reports tall-canopy area at 6 m and 8 m, max height, and canopy percent, for the lot and for the 6 m neighbour band the by-law's site-plan rule cares about. Tall-canopy pixels include buildings: the numbers measure elevated surface, not trees alone.
-2. **Calibrate mature-tree probability.** A logistic regression maps LiDAR height (max CHM in ~3 m window) and canopy area (CHM 6 m and up inside 5 m radius) around 13,208 Ward 12 street trees to P(trunk 30 cm or more), plus P(trunk over 61 cm) for the Distinctive tier. Street trees are managed road-allowance trees, so the transfer to private trees is approximate. One apex peak per contiguous tall structure is scored (a flat roof is one peak, a tree crown is one peak); peaks smoother than 95% of measured street-tree crowns are treated as roofs and excluded.
+1. **Measure canopy structure.** The NRCan HRDEM mosaic (CanElevation series, open data) serves 2023 airborne LiDAR flown for the Toronto and Region Conservation Authority at 1 m. Surface minus terrain gives a canopy height model (CHM). City of Toronto building footprints (557,694 outlines, 2 m buffer) are masked out of the CHM before measurement, so rooftops no longer read as canopy. Per parcel the screen reports tall-canopy area at 6 m and 8 m, max height, and canopy percent, for the lot and for the 6 m neighbour band the by-law's site-plan rule cares about. Coverage is 100% of Toronto (316/316 WCS probes across the city union, zero gaps, zero request errors).
+2. **Calibrate mature-tree probability.** A logistic regression maps LiDAR height (max CHM in ~3 m window) and canopy area (CHM 6 m and up inside 5 m radius) around 9,811 street trees with known trunk diameters to P(trunk 30 cm or more), plus P(trunk over 61 cm) for the Distinctive tier. The fit samples the building-masked CHM, so roofs contribute neither height nor canopy area to the features. Street trees are managed road-allowance trees, so the transfer to private trees is approximate. One apex peak per contiguous tall structure is scored; peaks smoother than 95% of measured street-tree crowns are treated as roofs and excluded.
 3. **Score against the by-law.** Peaks on the lot are rolled up to the chance at least one mature tree stands on the lot, and the same for the 6 m neighbour band. The `crowns` array in the API is reserved for a future segmentation win and currently empty.
 
 ## Accuracy
 
 | Metric | Measured | How measured |
 |---|---|---|
-| Mature-tree calibration P(DBH ≥ 30 cm) | **AUC 0.763** (5-fold CV 0.763 ± 0.009) | 13,208 Ward 12 street trees with known trunk diameters, geometric selection inside the ward polygon |
-| Distinctive-tree calibration P(DBH > 61 cm) | **AUC 0.805** (5-fold CV 0.805 ± 0.009) | Same trees, 7.2% positive |
-| Per-genus P(DBH ≥ 30 cm), n ≥ 500 | Acer 0.776, Gleditsia 0.802, Picea 0.757, Quercus 0.764, Tilia 0.807, Ulmus 0.707; Prunus 0.597 | Same fit, reported not shipped (genus unknown at inference) |
-| Binned calibration | Monotonic; e.g. predicted 0.40 → observed 0.46, predicted 0.66 → observed 0.69 | Deciles on the fit set |
+| Mature-tree calibration P(DBH ≥ 30 cm) | **AUC 0.826** (5-fold CV 0.826 ± 0.005) | 9,811 street trees with known trunk diameters, sampled on the building-masked CHM |
+| Distinctive-tree calibration P(DBH > 61 cm) | **AUC 0.896** (5-fold CV 0.896 ± 0.010) | Same trees |
+| Binned calibration | Monotonic; e.g. predicted 0.32 → observed 0.31, predicted 0.67 → observed 0.70 | Deciles on the fit set |
 | Individual crown detection (round 1) | **Failed honestly, not shipped**: pre-trained DeepForest F1 0.023, fine-tuned F1 0.000, 1 m watershed F1 0.046 | 182 hand-labeled crowns, 3 QA tiles; all five City orthophoto vintages are leaf-off spring captures |
 
 Full reasoning in `data/METHOD_NOTES.md`. The screen sidesteps detection entirely: it measures canopy structure, not crowns.
@@ -32,9 +31,9 @@ Full reasoning in `data/METHOD_NOTES.md`. The screen sidesteps detection entirel
 
 ## Limitations
 
-- The pilot covers **Ward 12 (Davenport)** only: 27,104 parcels. Addresses outside get HTTP 404 with the pilot scope.
+- The screen covers **all of Toronto**: 498,463 parcels in 25 wards. Addresses outside Toronto get HTTP 404; addresses inside Toronto that match no parcel get HTTP 404 "no canopy data for this location".
 - Screening signal only; never a permit determination. Only a certified arborist can confirm trunk diameter on site.
-- Tall-canopy area counts elevated surface 6 m and up, **including buildings**. The mature-tree probability is calibrated on street trees and applied to tree-like LiDAR peaks; pitched roofs still read as canopy and inflate it.
+- City building footprints (2 m buffer) are masked out before measurement, so rooftops no longer read as canopy. Other tall structures (sheds, gazebos, retaining walls, construction equipment) still do, and the mature-tree probability is applied to tree-like LiDAR peaks, so non-tree structures can inflate it.
 - The calibration is fit on managed road-allowance street trees; transfer to private backyard trees is approximate.
 - The screen cannot see trees removed after the 2023 LiDAR, and cannot see under-canopy trees.
 
@@ -42,9 +41,11 @@ Full reasoning in `data/METHOD_NOTES.md`. The screen sidesteps detection entirel
 
 Next.js 16 + React 19, TypeScript strict, EN/FR (`/en`, `/fr`), red/paper civic theme.
 
-- **Explorer** (`/`): address search with typeahead (`/api/suggest`, backed by the City's Address Points), a per-parcel tall-canopy map (2022 ortho with 2023 LiDAR canopy tint, pre-rendered PNGs), and a screening card with a plain-English verdict.
-- **REST**: `GET /api/v1/screen?address=…` (per-parcel screening payload), `GET /api/suggest?q=…` (typeahead), `GET /api/download?format=geojson|csv` (Ward 12 dataset, built on the fly), `GET /api/openapi.json` (OpenAPI 3.1).
+- **Explorer** (`/`): address search with typeahead (`/api/suggest`, backed by the City's Address Points), a per-parcel tall-canopy map (server-rendered on demand from the ward's masked 2023 LiDAR CHM), and a screening card with a plain-English verdict.
+- **REST**: `GET /api/v1/screen?address=…` (per-parcel screening payload, backed by 500 m parcel shards fetched one per request), `GET /api/v1/parcel-map?parcel_id=…` (server-rendered parcel map PNG), `GET /api/suggest?q=…` (typeahead), `GET /api/download?format=geojson|csv&ward=NN` (per-ward static dataset files), `GET /api/openapi.json` (OpenAPI 3.1).
 - **MCP**: `POST /mcp` (Streamable HTTP JSON-RPC 2.0) with tools `canopy_screen(address)` and `parcel_crowns(parcel_id)`.
+
+Parcel records live in `data/shards/` (one JSON per 500 m EPSG:3857 cell, plus `parcel_index.json`), served over HTTP via `CANOPY_SHARD_BASE` (jsDelivr over this repo in production, local `data/shards` in dev). The function bundle stays small: code plus a 10 KB simplified city boundary for honest 404s.
 
 ### Screenshots
 
@@ -61,14 +62,18 @@ npx tsc --noEmit   # type check
 npm run build      # production build
 ```
 
-The app reads `data/parcel_canopy_ward12.json` (per-parcel LiDAR metrics for all 27,104 Ward 12 parcels) and `data/calibration_lidar.json` (the fitted calibration). Reproduce both with the repo venv:
+The app reads `data/calibration_lidar.json` (the fitted calibration) and `data/city_boundary.json` (simplified Toronto boundary for 404s) from its bundle, and fetches parcel shards plus the parcel index over HTTP (`CANOPY_SHARD_BASE`). Reproduce the data pipeline with the repo venv:
 
 ```bash
-.venv/bin/python3 data/lidar/fetch_ward12_full.py  # 40 WCS chunks, NRCan HRDEM
-.venv/bin/python3 data/lidar/build_chm_full.py     # mosaic -> ward12_chm_full.tif
-.venv/bin/python3 data/lidar/calibrate_lidar.py    # -> data/calibration_lidar.json
-.venv/bin/python3 data/lidar/parcel_canopy.py      # -> data/parcel_canopy_ward12.json
-.venv/bin/python3 scripts/render_parcel_maps.py --only TOP-5293472  # demo map
+.venv/bin/python3 data/lidar/build_footprint_index.py  # one-time footprint bbox index
+.venv/bin/python3 data/lidar/ward_plan.py              # per-ward fetch plan
+.venv/bin/python3 data/lidar/build_parcel_index.py     # parcel centroid index + tile plan
+.venv/bin/python3 data/lidar/prefetch_chunks.py        # WCS DSM/DTM chunks, NRCan HRDEM
+for t in $(seq 0 36); do .venv/bin/python3 data/lidar/compute_tile.py --tile $t; done
+.venv/bin/python3 scripts/build_city_boundary.py       # -> data/city_boundary.json
+node scripts/build_shards_city.mjs                     # -> data/shards/
+.venv/bin/python3 scripts/build_ward_cogs.py           # -> data/cogs/ (map endpoint)
+.venv/bin/python3 scripts/build_downloads.py           # -> data/downloads/ (per-ward files)
 ```
 
 ## Licence
@@ -77,4 +82,4 @@ MIT. Data carries the City of Toronto and NRCan open data terms.
 
 ## Author
 
-**Richardson Dackam** — [X](https://x.com/richardsondx) · [GitHub](https://github.com/richardsondx)
+**Richardson Dackam** · [X](https://x.com/richardsondx) · [GitHub](https://github.com/richardsondx)

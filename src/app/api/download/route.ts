@@ -1,89 +1,88 @@
 import { NextRequest, NextResponse } from "next/server";
-import { loadCanopy, ParcelCanopy } from "@/lib/canopy";
+import { readFileSync, existsSync } from "fs";
+import { join } from "path";
+import { CITY_SCOPE, shardBase } from "@/lib/canopy";
 
-// GET /api/download?format=geojson|csv - the Ward 12 canopy dataset.
-// Built on the fly from data/parcel_canopy_ward12.json: one row per parcel.
+// GET /api/download?format=geojson|csv&ward=NN - the Toronto canopy dataset,
+// one ward at a time. Serves the pre-generated per-ward static files from the
+// shard storage (never loads the 400+ MB city dataset into the function).
+//
+//   /api/download?format=csv&ward=09  -> ward 09 CSV (metrics, no geometry)
+//   /api/download?format=geojson&ward=09 -> ward 09 GeoJSON (with parcel rings)
+
+const WARDS = Array.from({ length: 25 }, (_, i) => String(i + 1).padStart(2, "0"));
 
 const CSV_HEADER =
-  "parcel_id,address,area_m2,imagery_vintage," +
+  "parcel_id,address,area_m2,ward,imagery_vintage," +
   "lot_tall_canopy_m2_ge6,lot_tall_canopy_m2_ge8,lot_max_chm_m,lot_canopy_pct_8," +
   "lot_p_any_ge_30cm,lot_p_any_distinctive," +
   "buffer_tall_canopy_m2_ge6,buffer_tall_canopy_m2_ge8,buffer_max_chm_m," +
   "buffer_p_any_ge_30cm,buffer_p_any_distinctive";
 
-function toCsv(canopy: Record<string, ParcelCanopy>): string {
-  const q = (s: string) => `"${String(s ?? "").replace(/"/g, '""')}"`;
-  const rows: string[] = [CSV_HEADER];
-  for (const id of Object.keys(canopy)) {
-    const c = canopy[id];
-    const L = c.lot;
-    const B = c.buffer_6m;
-    rows.push(
-      [
-        c.parcel_id,
-        q(c.address),
-        c.area_m2,
-        c.imagery_vintage,
-        L.tall_canopy_m2_ge6,
-        L.tall_canopy_m2_ge8,
-        L.max_chm_m ?? "",
-        L.canopy_pct_8 ?? "",
-        L.p_any_ge_30cm,
-        L.p_any_distinctive,
-        B.tall_canopy_m2_ge6,
-        B.tall_canopy_m2_ge8,
-        B.max_chm_m ?? "",
-        B.p_any_ge_30cm,
-        B.p_any_distinctive,
-      ].join(","),
-    );
-  }
-  return rows.join("\n");
+// jsDelivr 403s files over 20 MB (measured); the per-ward GeoJSONs exceed
+// that, so on a non-OK from jsDelivr we fall back to raw.githubusercontent.com
+// for the same file. CSVs stay on the fast CDN path.
+function rawBase(): string | null {
+  const sb = shardBase();
+  const m = sb.match(
+    /^https:\/\/cdn\.jsdelivr\.net\/gh\/([^/]+\/[^/]+)@([^/]+)\/data\/shards\/?$/,
+  );
+  return m ? `https://raw.githubusercontent.com/${m[1]}/${m[2]}/data` : null;
 }
 
-function toGeoJson(canopy: Record<string, ParcelCanopy>): string {
-  const features = Object.keys(canopy).map((id) => {
-    const c = canopy[id];
-    return {
-      type: "Feature",
-      geometry: { type: "Polygon", coordinates: [c.ring_4326] },
-      properties: {
-        parcel_id: c.parcel_id,
-        address: c.address,
-        area_m2: c.area_m2,
-        imagery_vintage: c.imagery_vintage,
-        lot_tall_canopy_m2_ge6: c.lot.tall_canopy_m2_ge6,
-        lot_tall_canopy_m2_ge8: c.lot.tall_canopy_m2_ge8,
-        lot_max_chm_m: c.lot.max_chm_m,
-        lot_canopy_pct_8: c.lot.canopy_pct_8,
-        lot_p_any_ge_30cm: c.lot.p_any_ge_30cm,
-        lot_p_any_distinctive: c.lot.p_any_distinctive,
-        buffer_tall_canopy_m2_ge6: c.buffer_6m.tall_canopy_m2_ge6,
-        buffer_tall_canopy_m2_ge8: c.buffer_6m.tall_canopy_m2_ge8,
-        buffer_max_chm_m: c.buffer_6m.max_chm_m,
-        buffer_p_any_ge_30cm: c.buffer_6m.p_any_ge_30cm,
-        buffer_p_any_distinctive: c.buffer_6m.p_any_distinctive,
-      },
-    };
-  });
-  return JSON.stringify({ type: "FeatureCollection", features });
+async function readStatic(rel: string): Promise<Buffer | null> {
+  // rel is relative to data/, e.g. "downloads/ward_09.geojson"
+  const sb = shardBase();
+  if (!sb.startsWith("http")) {
+    const fn = join(process.cwd(), "data", rel);
+    if (!existsSync(fn)) return null;
+    return readFileSync(fn);
+  }
+  const dataBase = sb.replace(/\/shards\/?$/, "");
+  let res = await fetch(`${dataBase}/${rel}`);
+  if (res.ok) return Buffer.from(await res.arrayBuffer());
+  const rb = rawBase();
+  if (rb) {
+    res = await fetch(`${rb}/${rel}`);
+    if (res.ok) return Buffer.from(await res.arrayBuffer());
+  }
+  return null;
 }
 
 export async function GET(req: NextRequest) {
-  const format = new URL(req.url).searchParams.get("format") ?? "geojson";
-  const canopy = loadCanopy();
-  if (format === "csv") {
-    return new NextResponse(toCsv(canopy), {
-      headers: {
-        "Content-Type": "text/csv",
-        "Content-Disposition": "attachment; filename=toronto-tree-canopy-ward12.csv",
+  const params = new URL(req.url).searchParams;
+  const format = params.get("format") ?? "geojson";
+  const ward = (params.get("ward") ?? "").trim();
+  if (!WARDS.includes(ward)) {
+    return NextResponse.json(
+      {
+        error: `ward is required: one of ${WARDS.join(", ")}`,
+        wards: WARDS,
+        pilot_scope: CITY_SCOPE,
       },
-    });
+      { status: 400 },
+    );
   }
-  return new NextResponse(toGeoJson(canopy), {
+  if (format !== "geojson" && format !== "csv") {
+    return NextResponse.json(
+      { error: "format must be geojson or csv", pilot_scope: CITY_SCOPE },
+      { status: 400 },
+    );
+  }
+  const rel = `downloads/ward_${ward}.${format}`;
+  const body = await readStatic(rel);
+  if (!body) {
+    return NextResponse.json(
+      { error: `ward ${ward} ${format} is not published yet`, pilot_scope: CITY_SCOPE },
+      { status: 404 },
+    );
+  }
+  const filename = `toronto-tree-canopy-ward${ward}.${format}`;
+  return new NextResponse(new Uint8Array(body), {
     headers: {
-      "Content-Type": "application/geo+json",
-      "Content-Disposition": "attachment; filename=toronto-tree-canopy-ward12.geojson",
+      "Content-Type": format === "csv" ? "text/csv" : "application/geo+json",
+      "Content-Disposition": `attachment; filename=${filename}`,
+      "Cache-Control": "public, max-age=86400",
     },
   });
 }

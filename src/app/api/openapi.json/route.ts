@@ -6,7 +6,7 @@ const spec = {
     title: "Toronto Tree Canopy API",
     version: "0.2.0",
     description:
-      "Per-parcel tree screening for Toronto builders, architects, and investors, from the Ward 12 (Davenport) pilot: tall-canopy structure measured from 2023 airborne LiDAR (1 m canopy height model, NRCan HRDEM mosaic, TRCA GTA_2023), per-parcel tall-canopy area at the 6 m and 8 m thresholds, max height, canopy percent, and calibrated probabilities of a mature tree (30 cm permit threshold) and a Distinctive tree (61 cm tier), for the lot and the 6 m neighbour buffer matching the by-law site-plan rule. The crowns array is reserved for a future segmentation win and currently empty. Screening signal only; not a permit determination.",
+      "Per-parcel tree screening for Toronto builders, architects, and investors: tall-canopy structure measured from 2023 airborne LiDAR (1 m canopy height model, NRCan HRDEM mosaic, TRCA GTA_2023, City building footprints masked with a 2 m buffer), per-parcel tall-canopy area at the 6 m and 8 m thresholds, max height, canopy percent, and calibrated probabilities of a mature tree (30 cm permit threshold) and a Distinctive tree (61 cm tier), for the lot and the 6 m neighbour buffer matching the by-law site-plan rule. Covers all 498,463 Toronto parcels. The crowns array is reserved for a future segmentation win and currently empty. Screening signal only; not a permit determination.",
     license: { name: "MIT" },
   },
   servers: [{ url: "/api" }],
@@ -15,7 +15,7 @@ const spec = {
       get: {
         summary: "Tree screening for one Toronto address",
         description:
-          "Resolves the address against the City's Address Points, runs point-in-polygon against the Ward 12 parcels, and returns the per-parcel LiDAR screening payload. Outside Ward 12 the call returns HTTP 404.",
+          "Resolves the address against the City's Address Points, runs point-in-polygon against the city-wide 500 m parcel shards, and returns the per-parcel LiDAR screening payload. Outside Toronto the call returns HTTP 404.",
         parameters: [
           { name: "address", in: "query", required: true, schema: { type: "string" }, example: "1843 Eglinton Ave W" },
           { name: "lang", in: "query", required: false, schema: { type: "string", enum: ["en", "fr"] }, example: "en" },
@@ -75,7 +75,7 @@ const spec = {
                         note: { type: "string", example: "Screening signal only; not a permit determination." },
                       },
                     },
-                    pilot_scope: { type: "string", example: "Ward 12 Davenport pilot" },
+                    pilot_scope: { type: "string", example: "Toronto-wide 2023 LiDAR canopy screen" },
                   },
                 },
               },
@@ -83,13 +83,13 @@ const spec = {
           },
           "400": { description: "Missing address" },
           "404": {
-            description: "Address not found, or address outside the Ward 12 pilot. Body carries the pilot scope.",
+            description: "Address not found, address outside Toronto, or no parcel at the location. Body carries the scope.",
             content: {
               "application/json": {
                 schema: {
                   type: "object",
                   properties: {
-                    error: { type: "string", example: "pilot covers Ward 12 (Davenport) only" },
+                    error: { type: "string", example: "This address falls outside Toronto. The screen covers Toronto parcels only." },
                     pilot_scope: { type: "string" },
                   },
                 },
@@ -122,12 +122,27 @@ const spec = {
     },
     "/download": {
       get: {
-        summary: "Download the Ward 12 canopy dataset",
+        summary: "Download the Toronto canopy dataset, one ward at a time",
         parameters: [
           { name: "format", in: "query", required: false, schema: { type: "string", enum: ["geojson", "csv"] }, example: "geojson" },
+          { name: "ward", in: "query", required: true, schema: { type: "string", enum: ["01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25"] }, example: "09" },
         ],
         responses: {
-          "200": { description: "The dataset file: GeoJSON (default) or CSV, one row per Ward 12 parcel with its LiDAR canopy metrics" },
+          "200": { description: "The ward dataset file: GeoJSON (default, with parcel rings) or CSV (metrics only), one row per parcel with its LiDAR canopy metrics" },
+        },
+      },
+    },
+    "/v1/parcel-map": {
+      get: {
+        summary: "Server-rendered tall-canopy map for one parcel",
+        description:
+          "Renders a PNG on demand from the ward's building-masked 2023 LiDAR CHM: CHM-grayscale base, green tint where CHM is 8 m and up, parcel boundary, 6 m neighbour buffer (the image edge), a 10 m scale bar, and a caption band naming the sources. Long edge 1080 px.",
+        parameters: [
+          { name: "parcel_id", in: "query", required: true, schema: { type: "string" }, example: "TOP-5293472" },
+        ],
+        responses: {
+          "200": { description: "The parcel map PNG" },
+          "404": { description: "Unknown parcel ID" },
         },
       },
     },

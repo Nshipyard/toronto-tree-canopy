@@ -1,1 +1,23 @@
-{"dependencies":{"next":"16.4.0","react":"19.3.0","react-dom":"19.3.0"},"devDependencies":{"@types/node":"^20","@types/react":"^19","@types/react-dom":"^19","typescript":"^5"},"name":"toronto-tree-canopy","private":true,"scripts":{"build":"next build","dev":"next dev","start":"next start"},"version":"0.1.0"}
+{
+  "dependencies": {
+    "next": "16.4.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "geotiff": "^2.1.3",
+    "sharp": "0.35.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^5"
+  },
+  "name": "toronto-tree-canopy",
+  "private": true,
+  "scripts": {
+    "build": "next build --webpack",
+    "dev": "next dev",
+    "start": "next start"
+  },
+  "version": "0.1.0"
+}

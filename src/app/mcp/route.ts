@@ -3,16 +3,16 @@
 // Tools: canopy_screen, parcel_crowns.
 
 import { NextResponse } from "next/server";
-import { screenAddress, parcelById, ScreenError, buildScreenPayload, PILOT_SCOPE } from "@/lib/canopy";
+import { screenAddress, parcelById, ScreenError, buildScreenPayload, CITY_SCOPE } from "@/lib/canopy";
 import { pickLang } from "@/lib/i18n";
 
-const SERVER = { name: "toronto-tree-canopy", version: "0.1.0" };
+const SERVER = { name: "toronto-tree-canopy", version: "0.2.0" };
 
 const TOOLS = [
   {
     name: "canopy_screen",
     description:
-      "Per-lot tree screening for one Toronto address in the Ward 12 (Davenport) pilot, from measured 2023 airborne LiDAR (1 m canopy height model): tall-canopy area at the 6 m and 8 m thresholds, max height, canopy percent, and calibrated probabilities of a mature tree (30 cm permit threshold) and a Distinctive tree (61 cm tier), for the lot and the 6 m neighbour buffer matching the by-law site-plan rule, plus a plain-English verdict and the method note with calibration AUC. The crowns array is reserved for a future segmentation win and currently empty. Screening signal only; not a permit determination. Addresses outside Ward 12 return a 404-style error.",
+      "Per-lot tree screening for one Toronto address, from measured 2023 airborne LiDAR (1 m canopy height model, City building footprints masked): tall-canopy area at the 6 m and 8 m thresholds, max height, canopy percent, and calibrated probabilities of a mature tree (30 cm permit threshold) and a Distinctive tree (61 cm tier), for the lot and the 6 m neighbour buffer matching the by-law site-plan rule, plus a plain-English verdict and the method note with calibration AUC. Covers all 498,463 Toronto parcels. The crowns array is reserved for a future segmentation win and currently empty. Screening signal only; not a permit determination. Addresses outside Toronto return a 404-style error.",
     inputSchema: {
       type: "object",
       properties: {
@@ -25,11 +25,11 @@ const TOOLS = [
   {
     name: "parcel_crowns",
     description:
-      "Parcel screening payload for one Ward 12 parcel by parcel ID (e.g. 'TOP-5293472'): measured 2023 LiDAR tall-canopy metrics, calibrated 30 cm / 61 cm probabilities, the 6 m neighbour-buffer rollup, and the crowns array (reserved for a future segmentation win; currently empty). Screening signal only; not a permit determination.",
+      "Parcel screening payload for one Toronto parcel by parcel ID (e.g. 'TOP-5293472'): measured 2023 LiDAR tall-canopy metrics, calibrated 30 cm / 61 cm probabilities, the 6 m neighbour-buffer rollup, and the crowns array (reserved for a future segmentation win; currently empty). Screening signal only; not a permit determination.",
     inputSchema: {
       type: "object",
       properties: {
-        parcel_id: { type: "string", description: "Parcel ID, e.g. 'TOP-W12-0103'." },
+        parcel_id: { type: "string", description: "Parcel ID, e.g. 'TOP-5293472'." },
         lang: { type: "string", enum: ["en", "fr"], description: "Verdict language. Default 'en'." },
       },
       required: ["parcel_id"],
@@ -83,9 +83,9 @@ async function handle(msg: unknown) {
           const parcelId = String(args?.parcel_id ?? "").trim();
           if (!parcelId) return err(id, -32602, "parcel_id is required");
           const lang = pickLang(typeof args?.lang === "string" ? args.lang : undefined);
-          const found = parcelById(parcelId);
+          const found = await parcelById(parcelId);
           if (!found) {
-            return err(id, -32001, JSON.stringify({ error: `parcel ${parcelId} not found`, pilot_scope: PILOT_SCOPE }));
+            return err(id, -32001, JSON.stringify({ error: `parcel ${parcelId} not found`, pilot_scope: CITY_SCOPE }));
           }
           return ok(id, textResult(buildScreenPayload(found, found.address, lang)));
         }

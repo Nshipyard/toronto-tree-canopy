@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Explorer from "@/components/Explorer";
+import DownloadPicker from "@/components/DownloadPicker";
 import McpConnect from "@/components/McpConnect";
 import { LANGS, STRINGS, pickLang } from "@/lib/i18n";
 import { loadCalibration } from "@/lib/canopy";
@@ -78,10 +79,11 @@ export default async function LangPage({ params }: { params: Promise<{ lang: str
           <p className="kicker">{t.download.kicker}</p>
           <h2 className="display">{t.download.title}</h2>
           <p>{t.download.body}</p>
-          <div className="dlbuttons">
-            <a className="dlbutton" href="/api/download?format=geojson">{t.download.geojson}</a>
-            <a className="dlbutton" href="/api/download?format=csv">{t.download.csv}</a>
-          </div>
+          <DownloadPicker
+            wardLabel={t.download.wardLabel}
+            geojsonLabel={t.download.geojson}
+            csvLabel={t.download.csv}
+          />
         </section>
 
         <McpConnect lang={l} />

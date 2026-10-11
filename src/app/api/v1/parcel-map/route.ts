@@ -8,8 +8,8 @@ import { parcelById, CITY_SCOPE, cogBase } from "@/lib/canopy";
 // GET /api/v1/parcel-map?parcel_id=TOP-…&lang=en|fr
 // Server-renders a per-parcel tall-canopy PNG on demand: the parcel window is
 // read from the ward's masked-CHM COG (uint16 decimetres, buildings NaN) via
-// HTTP range reads, then rendered in the same visual language as the
-// pre-rendered maps: CHM-grayscale base, green tint where CHM >= 8 m, parcel
+// HTTP range reads, then rendered over the City of Toronto 2022 aerial
+// orthophoto (8 cm): photo base, green tint where CHM >= 8 m, parcel
 // boundary (dark line, white underlay), 6 m neighbour buffer (dashed, the
 // image edge), a 10 m scale bar, and a caption band naming the sources.
 // Long edge 1080 px. Cacheable basically forever: the render is deterministic
@@ -69,6 +69,43 @@ function overlaySvg(
   );
 }
 
+const ORTHO_EXPORT =
+  "https://gis.toronto.ca/arcgis/rest/services/basemap/cot_ortho_2022_color_8cm/MapServer/export";
+
+// Fetch the City of Toronto 2022 orthophoto (8 cm) for a 3857 bbox at exactly
+// W x H px. Returns null on any failure so the caller can fall back to the
+// CHM-grayscale base and the map still renders.
+async function fetchOrtho(
+  bx0: number,
+  by0: number,
+  bx1: number,
+  by1: number,
+  W: number,
+  H: number,
+): Promise<Buffer | null> {
+  try {
+    const url =
+      `${ORTHO_EXPORT}?bbox=${bx0.toFixed(2)},${by0.toFixed(2)},${bx1.toFixed(2)},${by1.toFixed(2)}` +
+      `&bboxSR=3857&imageSR=3857&size=${W},${H}&format=png32&f=image`;
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 15000);
+    let res: Response;
+    try {
+      res = await fetch(url, { signal: ctl.signal });
+    } finally {
+      clearTimeout(t);
+    }
+    if (!res.ok) return null;
+    const ct = res.headers.get("content-type") ?? "";
+    if (!ct.startsWith("image/")) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length < 5000) return null;
+    return buf;
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(req: NextRequest) {
   const params = new URL(req.url).searchParams;
   const parcelId = (params.get("parcel_id") ?? "").trim().toUpperCase();
@@ -95,10 +132,28 @@ export async function GET(req: NextRequest) {
   const pts3857 = parcel.ring_4326.map(([lo, la]) => to3857(lo, la));
   const xs = pts3857.map((p) => p[0]);
   const ys = pts3857.map((p) => p[1]);
-  const bx0 = Math.min(...xs) - BUFFER_M;
-  const by0 = Math.min(...ys) - BUFFER_M;
-  const bx1 = Math.max(...xs) + BUFFER_M;
-  const by1 = Math.max(...ys) + BUFFER_M;
+  let bx0 = Math.min(...xs) - BUFFER_M;
+  let by0 = Math.min(...ys) - BUFFER_M;
+  let bx1 = Math.max(...xs) + BUFFER_M;
+  let by1 = Math.max(...ys) + BUFFER_M;
+  // Clamp the window to at most a 2:1 aspect ratio so very long, narrow
+  // parcels do not render as unreadable strips; the short side is expanded
+  // with extra map context, centred on the parcel.
+  {
+    const wM = bx1 - bx0;
+    const hM = by1 - by0;
+    if (wM > 2 * hM) {
+      const nh = wM / 2;
+      const cy = (by0 + by1) / 2;
+      by0 = cy - nh / 2;
+      by1 = cy + nh / 2;
+    } else if (hM > 2 * wM) {
+      const nw = hM / 2;
+      const cx = (bx0 + bx1) / 2;
+      bx0 = cx - nw / 2;
+      bx1 = cx + nw / 2;
+    }
+  }
   const [lon0, lat0] = mercInv(bx0, by0);
   const [lon1, lat1] = mercInv(bx1, by1);
 
@@ -169,12 +224,22 @@ export async function GET(req: NextRequest) {
   const H = Math.max(1, Math.round(rh * scale));
   const mPerPx = (bx1 - bx0) / W;
 
-  const basePng = await sharp(baseBuf, {
-    raw: { width: rw, height: rh, channels: 3 },
-  })
-    .resize(W, H, { kernel: sharp.kernel.lanczos3 })
-    .png()
-    .toBuffer();
+  // Base layer: the 2022 aerial orthophoto (8 cm, sharp). If it cannot be
+  // fetched, fall back to the CHM grayscale so the map still renders.
+  let basePng: Buffer | null = await fetchOrtho(bx0, by0, bx1, by1, W, H);
+  if (basePng) {
+    const meta = await sharp(basePng).metadata();
+    if (meta.width !== W || meta.height !== H) {
+      basePng = await sharp(basePng).resize(W, H, { fit: "fill" }).png().toBuffer();
+    }
+  } else {
+    basePng = await sharp(baseBuf, {
+      raw: { width: rw, height: rh, channels: 3 },
+    })
+      .resize(W, H, { kernel: sharp.kernel.lanczos3 })
+      .png()
+      .toBuffer();
+  }
   const tintPng = await sharp(tintBuf, {
     raw: { width: rw, height: rh, channels: 4 },
   })
@@ -186,7 +251,7 @@ export async function GET(req: NextRequest) {
     ((x - bx0) / (bx1 - bx0)) * W,
     ((by1 - y) / (by1 - by0)) * H,
   ]);
-  const caption = "Base: 2023 LiDAR surface · Canopy: 2023 LiDAR, buildings masked";
+  const caption = "Imagery: City of Toronto 2022 orthophoto · Canopy: 2023 LiDAR, buildings masked";
   const svg = overlaySvg(W, H, poly, mPerPx, caption);
 
   const png = await sharp(basePng)

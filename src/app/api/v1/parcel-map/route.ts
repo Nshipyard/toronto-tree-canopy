@@ -6,14 +6,17 @@ import { fromUrl, fromArrayBuffer } from "geotiff";
 import { parcelById, CITY_SCOPE, cogBase } from "@/lib/canopy";
 
 // GET /api/v1/parcel-map?parcel_id=TOP-…&lang=en|fr
-// Server-renders a per-parcel tall-canopy PNG on demand: the parcel window is
-// read from the ward's masked-CHM COG (uint16 decimetres, buildings NaN) via
-// HTTP range reads, then rendered over the City of Toronto 2022 aerial
-// orthophoto (8 cm): photo base, green tint where CHM >= 8 m, parcel
-// boundary (dark line, white underlay), 6 m neighbour buffer (dashed, the
-// image edge), a 10 m scale bar, and a caption band naming the sources.
-// Long edge 1080 px. Cacheable basically forever: the render is deterministic
-// over static data.
+// Server-renders a per-parcel tall-canopy overlay PNG on demand: the parcel
+// window is read from the ward's masked-CHM COG (uint16 decimetres, buildings
+// NaN) via HTTP range reads, then rendered as a TRANSPARENT overlay: green
+// tint where CHM >= 8 m, parcel
+// boundary (dark line, white underlay) and 6 m neighbour buffer (dashed, the
+// image edge). The browser composites this over the City of Toronto 2022
+// aerial orthophoto (fetched client-side from the City's MapServer), so the
+// map shows real imagery with the LiDAR tint on top. Long edge 1080 px.
+// Cacheable basically forever: the render is deterministic over static data.
+// ?format=json returns the render window instead of the PNG:
+// { bbox_3857, width, height, m_per_px }.
 
 export const maxDuration = 30;
 
@@ -41,69 +44,18 @@ function overlaySvg(
   H: number,
   poly: [number, number][],
   mPerPx: number,
-  caption: string,
 ): string {
+  const dash = `${(4 / mPerPx).toFixed(1)} ${(3 / mPerPx).toFixed(1)}`;
   const s = W / LONG_EDGE;
   const pts = poly.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
-  const dash = `${(4 / mPerPx).toFixed(1)} ${(3 / mPerPx).toFixed(1)}`;
-  const barPx = 10 / mPerPx;
-  const bandH = Math.round(44 * s);
-  const sbY = H - bandH - Math.round(26 * s);
-  const sbX = Math.round(24 * s);
-  const fsBar = Math.round(26 * s);
-  const fsCap = Math.max(14, Math.round(22 * s));
-  const esc = caption.replace(/&/g, "&amp;").replace(/</g, "&lt;");
   return (
     `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">` +
     `<rect x="4" y="4" width="${W - 8}" height="${H - 8}" fill="none" stroke="white" stroke-width="${Math.max(4, Math.round(7 * s))}" stroke-dasharray="${dash}"/>` +
     `<rect x="4" y="4" width="${W - 8}" height="${H - 8}" fill="none" stroke="#8a8fa0" stroke-width="${Math.max(2, Math.round(3 * s))}" stroke-dasharray="${dash}"/>` +
     `<polyline points="${pts}" fill="none" stroke="white" stroke-width="${Math.round(9 * s)}" stroke-linejoin="round"/>` +
     `<polyline points="${pts}" fill="none" stroke="#0a0f1e" stroke-width="${Math.max(2, Math.round(4 * s))}" stroke-linejoin="round"/>` +
-    `<rect x="0" y="${H - bandH}" width="${W}" height="${bandH}" fill="black" fill-opacity="0.62"/>` +
-    `<line x1="${sbX}" y1="${sbY}" x2="${sbX + barPx}" y2="${sbY}" stroke="white" stroke-width="${Math.max(3, Math.round(7 * s))}"/>` +
-    `<line x1="${sbX}" y1="${sbY - Math.round(7 * s)}" x2="${sbX}" y2="${sbY + Math.round(7 * s)}" stroke="white" stroke-width="${Math.max(3, Math.round(7 * s))}"/>` +
-    `<line x1="${sbX + barPx}" y1="${sbY - Math.round(7 * s)}" x2="${sbX + barPx}" y2="${sbY + Math.round(7 * s)}" stroke="white" stroke-width="${Math.max(3, Math.round(7 * s))}"/>` +
-    `<text x="${sbX + barPx / 2}" y="${sbY - Math.round(12 * s)}" text-anchor="middle" font-family="DejaVu Sans, Verdana, sans-serif" font-weight="bold" font-size="${fsBar}" fill="white">10 m</text>` +
-    `<text x="${W - Math.round(20 * s)}" y="${H - bandH + Math.round(28 * s)}" text-anchor="end" font-family="DejaVu Sans, Verdana, sans-serif" font-size="${fsCap}" fill="white">${esc}</text>` +
     `</svg>`
   );
-}
-
-const ORTHO_EXPORT =
-  "https://gis.toronto.ca/arcgis/rest/services/basemap/cot_ortho_2022_color_8cm/MapServer/export";
-
-// Fetch the City of Toronto 2022 orthophoto (8 cm) for a 3857 bbox at exactly
-// W x H px. Returns null on any failure so the caller can fall back to the
-// CHM-grayscale base and the map still renders.
-async function fetchOrtho(
-  bx0: number,
-  by0: number,
-  bx1: number,
-  by1: number,
-  W: number,
-  H: number,
-): Promise<Buffer | null> {
-  try {
-    const url =
-      `${ORTHO_EXPORT}?bbox=${bx0.toFixed(2)},${by0.toFixed(2)},${bx1.toFixed(2)},${by1.toFixed(2)}` +
-      `&bboxSR=3857&imageSR=3857&size=${W},${H}&format=png32&f=image`;
-    const ctl = new AbortController();
-    const t = setTimeout(() => ctl.abort(), 15000);
-    let res: Response;
-    try {
-      res = await fetch(url, { signal: ctl.signal });
-    } finally {
-      clearTimeout(t);
-    }
-    if (!res.ok) return null;
-    const ct = res.headers.get("content-type") ?? "";
-    if (!ct.startsWith("image/")) return null;
-    const buf = Buffer.from(await res.arrayBuffer());
-    if (buf.length < 5000) return null;
-    return buf;
-  } catch {
-    return null;
-  }
 }
 
 export async function GET(req: NextRequest) {
@@ -198,47 +150,36 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // Base: CHM grayscale; tint: green where CHM >= 8 m (buildings are NaN).
-  const n = rw * rh;
-  const baseBuf = Buffer.alloc(n * 3);
-  const tintBuf = Buffer.alloc(n * 4);
-  for (let k = 0; k < n; k++) {
+  // Transparent overlay: green tint where masked CHM >= 8 m (buildings are NaN).
+  const scale = Math.max(LONG_EDGE / Math.max(rw, rh), 1);
+  const W = Math.max(1, Math.round(rw * scale));
+  const H = Math.max(1, Math.round(rh * scale));
+  const mPerPx = (bx1 - bx0) / W;
+
+  if (params.get("format") === "json") {
+    return NextResponse.json(
+      {
+        bbox_3857: [bx0, by0, bx1, by1],
+        width: W,
+        height: H,
+        m_per_px: mPerPx,
+      },
+      { headers: { "Cache-Control": "public, max-age=31536000, immutable" } },
+    );
+  }
+
+  // baseBuf (CHM grayscale) is no longer composited; the overlay is
+  // transparent and the browser supplies the aerial photo underneath.
+  const tintBuf = Buffer.alloc(rw * rh * 4);
+  for (let k = 0; k < rw * rh; k++) {
     const rv = raw[k] as number;
     const v = rv === 65535 ? NaN : rv / 10;
-    const g = Number.isFinite(v)
-      ? Math.round(235 - (Math.min(Math.max(v, 0), 30) / 30) * 165)
-      : 235;
-    baseBuf[k * 3] = g;
-    baseBuf[k * 3 + 1] = g;
-    baseBuf[k * 3 + 2] = g;
     if (Number.isFinite(v) && v >= TALL_M) {
       tintBuf[k * 4] = 46;
       tintBuf[k * 4 + 1] = 125;
       tintBuf[k * 4 + 2] = 50;
       tintBuf[k * 4 + 3] = 115;
     }
-  }
-
-  const scale = Math.max(LONG_EDGE / Math.max(rw, rh), 1);
-  const W = Math.max(1, Math.round(rw * scale));
-  const H = Math.max(1, Math.round(rh * scale));
-  const mPerPx = (bx1 - bx0) / W;
-
-  // Base layer: the 2022 aerial orthophoto (8 cm, sharp). If it cannot be
-  // fetched, fall back to the CHM grayscale so the map still renders.
-  let basePng: Buffer | null = await fetchOrtho(bx0, by0, bx1, by1, W, H);
-  if (basePng) {
-    const meta = await sharp(basePng).metadata();
-    if (meta.width !== W || meta.height !== H) {
-      basePng = await sharp(basePng).resize(W, H, { fit: "fill" }).png().toBuffer();
-    }
-  } else {
-    basePng = await sharp(baseBuf, {
-      raw: { width: rw, height: rh, channels: 3 },
-    })
-      .resize(W, H, { kernel: sharp.kernel.lanczos3 })
-      .png()
-      .toBuffer();
   }
   const tintPng = await sharp(tintBuf, {
     raw: { width: rw, height: rh, channels: 4 },
@@ -251,10 +192,16 @@ export async function GET(req: NextRequest) {
     ((x - bx0) / (bx1 - bx0)) * W,
     ((by1 - y) / (by1 - by0)) * H,
   ]);
-  const caption = "Imagery: City of Toronto 2022 orthophoto · Canopy: 2023 LiDAR, buildings masked";
-  const svg = overlaySvg(W, H, poly, mPerPx, caption);
+  const svg = overlaySvg(W, H, poly, mPerPx);
 
-  const png = await sharp(basePng)
+  const png = await sharp({
+    create: {
+      width: W,
+      height: H,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    },
+  })
     .composite([{ input: tintPng }, { input: Buffer.from(svg) }])
     .png()
     .toBuffer();

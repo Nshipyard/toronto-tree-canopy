@@ -326,3 +326,10 @@ main { max-width: 960px; margin: 0 auto; padding: 0 20px 60px; width: 100%; }
 .footer-wordmark { font-family: "Newsreader", Georgia, serif; font-size: 1.5rem; margin: 0 0 6px; }
 .footer p { margin: 6px 0; font-size: 0.9rem; color: #b9b4a6; max-width: 640px; }
 .footer a { color: #fff; }
+
+.parcelmap img.orthobase { width: 100%; height: auto; display: block; }
+.parcelmap img.tintoverlay { position: absolute; inset: 0; width: 100%; height: 100%; }
+.parcelmap img.tintalone { width: 100%; height: auto; display: block; }
+.scalebar { position: absolute; left: 4%; bottom: 5%; height: 9px; border-bottom: 4px solid #fff; border-left: 3px solid #fff; border-right: 3px solid #fff; filter: drop-shadow(0 1px 2px rgba(0,0,0,.75)); }
+.scalebar span { position: absolute; bottom: 11px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 12px; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,.85); white-space: nowrap; }
+.mapcredit { margin: 8px 2px 0; font-size: .8rem; color: var(--muted); }

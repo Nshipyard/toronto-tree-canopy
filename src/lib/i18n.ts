@@ -74,6 +74,7 @@ const en = {
     legendTall: "tall canopy (8 m and up, 2023 LiDAR)",
     legendParcel: "parcel boundary",
     legendBuffer: "6 m neighbour buffer",
+    credit: "Imagery: City of Toronto 2022 orthophoto. Canopy: 2023 LiDAR, buildings masked.",
     scaleBar: (m: number) => `${m} m`,
     missingImage:
       "The canopy map for this parcel could not be rendered. The map is drawn on demand from the 2023 LiDAR surface; try again in a moment.",
@@ -200,6 +201,7 @@ const fr = {
     legendTall: "canopée haute (8 m et plus, LiDAR 2023)",
     legendParcel: "limite de la parcelle",
     legendBuffer: "zone tampon de 6 m",
+    credit: "Imagerie : orthophoto 2022 de la Ville de Toronto. Canopée : LiDAR 2023, bâtiments masqués.",
     scaleBar: (m: number) => `${m} m`,
     missingImage:
       "La carte de canopée de cette parcelle n'a pas pu être produite. La carte est dessinée à la demande à partir de la surface LiDAR de 2023; réessayez dans un moment.",

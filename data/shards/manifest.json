@@ -1,0 +1,11 @@
+{
+ "cell_m": 500,
+ "shards": 5448,
+ "records": 498463,
+ "total_shard_bytes": 512974296,
+ "max_shard_bytes": 401810,
+ "max_shard_cell": "-17684_10828",
+ "parcel_index_bytes": 14467664,
+ "avg_shard_kb": 91.95144290335904,
+ "built": "2026-10-11T01:31:43.117Z"
+}

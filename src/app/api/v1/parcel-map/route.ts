@@ -104,14 +104,15 @@ export async function GET(req: NextRequest) {
 
   // Read the window from the ward COG (uint16 decimetres, 65535 = nodata).
   const base = cogBase();
-  const cogUrl = `${base}/ward_${parcel.ward}_chm.tif`;
+  const wardTag = String(parcel.ward).padStart(2, "0");
+  const cogUrl = `${base}/ward_${wardTag}_chm.tif`;
   let raw: ArrayLike<number>;
   let rw: number, rh: number;
   try {
     const tiff = base.startsWith("http")
       ? await fromUrl(cogUrl)
       : await (async () => {
-          const fn = join(base, `ward_${parcel.ward}_chm.tif`);
+          const fn = join(base, `ward_${wardTag}_chm.tif`);
           if (!existsSync(fn)) throw new Error("no local COG");
           return fromArrayBuffer(readFileSync(fn).buffer as ArrayBuffer);
         })();
@@ -132,6 +133,7 @@ export async function GET(req: NextRequest) {
     rw = right - left;
     rh = bottom - top;
   } catch (e) {
+    console.error("parcel-map", parcelId, e);
     return NextResponse.json(
       {
         error: "canopy map is not available for this parcel yet",
